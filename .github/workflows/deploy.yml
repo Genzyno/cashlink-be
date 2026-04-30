@@ -41,5 +41,6 @@ jobs:
           port: ${{ secrets.PORT }}
           script: |
             cd /home/ubuntu/myledger
-            docker compose down
+            docker compose down --remove-orphans
+            docker rm -f myledger-api || true
             docker compose up -d --build

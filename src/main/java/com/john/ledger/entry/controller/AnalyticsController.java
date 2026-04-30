@@ -17,6 +17,7 @@ import java.util.UUID;
 @RequestMapping("analytics")
 public class AnalyticsController {
 
+    //testing for commit cicd pipelies
     @Autowired
     private IAnalyticsService analyticsService;
 

@@ -1,5 +1,5 @@
 # Google Sign-In on Android (Cash Link / My Ledger)
-
+#testing
 **Full step-by-step checklist:** see **[GOOGLE_SIGNIN_COMPLETE_FIX.md](./GOOGLE_SIGNIN_COMPLETE_FIX.md)** (Google Cloud, Firebase, Flutter, backend).
 
 **SHA-1 script (run against your Flutter project folder):** `scripts/get-debug-sha1.ps1` in this repo.

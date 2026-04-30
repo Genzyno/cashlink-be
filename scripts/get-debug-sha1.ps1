@@ -3,7 +3,7 @@
 #   powershell -File "<path-to-my-ledger-be>\scripts\get-debug-sha1.ps1" -FlutterRoot "D:\path\to\my_ledger_app"
 # Or copy this file to your Flutter project as android\get-debug-sha1.ps1 and run:
 #   powershell -File android\get-debug-sha1.ps1
-
+#testing
 param(
     [string]$FlutterRoot = ""
 )

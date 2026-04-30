@@ -13,7 +13,7 @@ Authorization: Bearer <accessToken>
 Optional for some APIs: `X-Logged-User-Id: <user-uuid>` (must match token).
 
 ---
-
+#testing
 ## Auth – full paths
 
 | Method | Full path | Auth | Description |

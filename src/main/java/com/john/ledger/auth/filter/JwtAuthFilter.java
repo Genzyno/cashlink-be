@@ -13,6 +13,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -21,82 +22,147 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private JwtService jwtService;
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        String uri = request.getRequestURI();
+        String path = request.getRequestURI();
         String method = request.getMethod();
 
-        // Allow preflight
+        // ===============================
+        // PUBLIC URLS
+        // ===============================
         if ("OPTIONS".equalsIgnoreCase(method)) {
-            return true;
+            filterChain.doFilter(request, response);
+            return;
         }
 
-        // Public endpoints
-        return uri.contains("/auth/")
-                || uri.contains("/public/")
-                || uri.contains("/actuator")
-                || uri.contains("/swagger-ui")
-                || uri.contains("/v3/api-docs")
-                || uri.contains("/swagger-resources")
-                || uri.contains("/webjars");
-    }
+        if (path != null) {
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
+            // auth urls
+            if (path.startsWith("/myledger-api/auth/")
+                    || path.startsWith("/auth/")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // public urls
+            if (path.startsWith("/myledger-api/public/")
+                    || path.startsWith("/public/")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // actuator
+            if (path.startsWith("/actuator")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // swagger
+            if (path.contains("/swagger-ui")
+                    || path.contains("/v3/api-docs")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+        }
+
+        // ===============================
+        // READ TOKEN
+        // ===============================
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            send401(response, "Missing token");
+            return;
+        }
+
+        String token = authHeader.substring(7).trim();
+
+        if (token.isEmpty()) {
+            send401(response, "Invalid token");
+            return;
+        }
+
+        // ===============================
+        // VALIDATE TOKEN
+        // ===============================
+        JwtService.TokenPayload payload = jwtService.parseAccessToken(token);
+
+        if (payload == null) {
+            send401(response, "Token expired or invalid");
+            return;
+        }
+
+        // ===============================
+        // GET USER ID FROM TOKEN
+        // ===============================
+        String tokenUserId = payload.userId();
+
+        if (tokenUserId == null || tokenUserId.isBlank()) {
+            send401(response, "Invalid token user");
+            return;
+        }
+
+        // ===============================
+        // OPTIONAL HEADER CHECK
+        // ===============================
+        String headerUserId = request.getHeader("X-Logged-User-Id");
+
+        if (headerUserId != null && !headerUserId.isBlank()) {
+
+            try {
+                UUID.fromString(headerUserId);
+
+                if (!headerUserId.equals(tokenUserId)) {
+                    send403(response, "User mismatch");
+                    return;
+                }
+
+            } catch (Exception ex) {
+                send403(response, "Invalid user id");
+                return;
+            }
+        }
+
+        // ===============================
+        // SET USER DATA
+        // ===============================
+        request.setAttribute("userId", tokenUserId);
+        request.setAttribute("userEmail", payload.email());
+
+        CurrentUserHolder.setUserId(tokenUserId);
 
         try {
-
-            String authHeader = request.getHeader("Authorization");
-
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                send401(response, "Missing token");
-                return;
-            }
-
-            String token = authHeader.substring(7).trim();
-
-            if (token.isEmpty()) {
-                send401(response, "Invalid token");
-                return;
-            }
-
-            JwtService.TokenPayload payload = jwtService.parseAccessToken(token);
-
-            if (payload == null) {
-                send401(response, "Expired or invalid token");
-                return;
-            }
-
-            // Set request attributes
-            request.setAttribute("userId", payload.userId());
-            request.setAttribute("userEmail", payload.email());
-
-            // Thread local
-            CurrentUserHolder.setUserId(payload.userId());
-
             filterChain.doFilter(request, response);
-
         } finally {
             CurrentUserHolder.clear();
         }
     }
 
-    private void send401(HttpServletResponse response, String message) throws IOException {
-
+    // ===============================
+    // 401
+    // ===============================
+    private void send401(HttpServletResponse response, String msg) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-
         response.getWriter().write(
-                "{\"message\":\"" + escapeJson(message) + "\",\"statusCode\":401,\"data\":null}"
+                "{\"message\":\"" + msg + "\",\"statusCode\":401}"
         );
     }
 
-    private String escapeJson(String text) {
-        if (text == null) return "";
-        return text.replace("\\", "\\\\").replace("\"", "\\\"");
+    // ===============================
+    // 403
+    // ===============================
+    private void send403(HttpServletResponse response, String msg) throws IOException {
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.getWriter().write(
+                "{\"message\":\"" + msg + "\",\"statusCode\":403}"
+        );
     }
 }

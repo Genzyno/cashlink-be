@@ -31,47 +31,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
-        // ===============================
-        // PUBLIC URLS
-        // ===============================
+        // ==================================================
+        // ALWAYS ALLOW OPTIONS (CORS PRE-FLIGHT)
+        // ==================================================
         if ("OPTIONS".equalsIgnoreCase(method)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        if (path != null) {
-
-            // auth urls
-            if (path.startsWith("/myledger-api/auth/")
-                    || path.startsWith("/auth/")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            // public urls
-            if (path.startsWith("/myledger-api/public/")
-                    || path.startsWith("/public/")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            // actuator
-            if (path.startsWith("/actuator")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            // swagger
-            if (path.contains("/swagger-ui")
-                    || path.contains("/v3/api-docs")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
+        // ==================================================
+        // PUBLIC ENDPOINTS (NO TOKEN REQUIRED)
+        // ==================================================
+        if (isPublicUrl(path)) {
+            filterChain.doFilter(request, response);
+            return;
         }
 
-        // ===============================
-        // READ TOKEN
-        // ===============================
+        // ==================================================
+        // READ AUTH TOKEN
+        // ==================================================
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -81,14 +59,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String token = authHeader.substring(7).trim();
 
-        if (token.isEmpty()) {
+        if (token.isBlank()) {
             send401(response, "Invalid token");
             return;
         }
 
-        // ===============================
+        // ==================================================
         // VALIDATE TOKEN
-        // ===============================
+        // ==================================================
         JwtService.TokenPayload payload = jwtService.parseAccessToken(token);
 
         if (payload == null) {
@@ -96,9 +74,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ===============================
-        // GET USER ID FROM TOKEN
-        // ===============================
         String tokenUserId = payload.userId();
 
         if (tokenUserId == null || tokenUserId.isBlank()) {
@@ -106,9 +81,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ===============================
+        // ==================================================
         // OPTIONAL HEADER CHECK
-        // ===============================
+        // ==================================================
         String headerUserId = request.getHeader("X-Logged-User-Id");
 
         if (headerUserId != null && !headerUserId.isBlank()) {
@@ -127,9 +102,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
         }
 
-        // ===============================
+        // ==================================================
         // SET USER DATA
-        // ===============================
+        // ==================================================
         request.setAttribute("userId", tokenUserId);
         request.setAttribute("userEmail", payload.email());
 
@@ -142,25 +117,64 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
     }
 
-    // ===============================
+    // ==================================================
+    // PUBLIC URLS
+    // ==================================================
+    private boolean isPublicUrl(String path) {
+
+        if (path == null) return false;
+
+        return
+
+                // AUTH
+                path.startsWith("/myledger-api/auth/")
+                        || path.startsWith("/auth/")
+
+                        // PUBLIC
+                        || path.startsWith("/myledger-api/public/")
+                        || path.startsWith("/public/")
+
+                        // ACTUATOR
+                        || path.startsWith("/actuator")
+                        || path.startsWith("/myledger-api/actuator")
+
+                        // SWAGGER
+                        || path.contains("/swagger-ui")
+                        || path.contains("/v3/api-docs")
+
+                        // GOOGLE LOGIN
+                        || path.contains("/google")
+
+                        // STATIC
+                        || path.contains("/favicon.ico")
+
+                        // INVITE LINKS
+                        || path.contains("/invite-by-token")
+                        || path.contains("/accept-invite")
+                        || path.contains("/reject-invite");
+    }
+
+    // ==================================================
     // 401
-    // ===============================
+    // ==================================================
     private void send401(HttpServletResponse response, String msg) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+
         response.getWriter().write(
                 "{\"message\":\"" + msg + "\",\"statusCode\":401}"
         );
     }
 
-    // ===============================
+    // ==================================================
     // 403
-    // ===============================
+    // ==================================================
     private void send403(HttpServletResponse response, String msg) throws IOException {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+
         response.getWriter().write(
                 "{\"message\":\"" + msg + "\",\"statusCode\":403}"
         );

@@ -17,14 +17,16 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
 
-                .httpBasic(httpBasic -> httpBasic.disable())   // REMOVE POPUP
-                .formLogin(form -> form.disable())             // REMOVE LOGIN PAGE
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .formLogin(form -> form.disable())
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         .requestMatchers(
                                 "/myledger-api/auth/**",
+                                "/myledger-api/auth/google",
+                                "/myledger-api/auth/google/**",
                                 "/myledger-api/public/**",
                                 "/myledger-api/actuator/**"
                         ).permitAll()

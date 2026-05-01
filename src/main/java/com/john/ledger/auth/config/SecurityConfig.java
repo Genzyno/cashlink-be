@@ -1,14 +1,21 @@
 package com.john.ledger.auth.config;
 
+import com.john.ledger.auth.filter.JwtAuthFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthFilter jwtAuthFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -18,28 +25,42 @@ public class SecurityConfig {
 
                 .cors(Customizer.withDefaults())
 
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
                 .authorizeHttpRequests(auth -> auth
 
-                        // OPTIONS
+                        // Preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // AUTH APIs
-                        .requestMatchers("/auth/**").permitAll()
+                        // Public auth endpoints
+                        .requestMatchers("/myledger-api/auth/**").permitAll()
 
-                        // PUBLIC APIs
-                        .requestMatchers("/public/**").permitAll()
+                        // Public endpoints
+                        .requestMatchers("/myledger-api/public/**").permitAll()
 
-                        // actuator
+                        // Swagger
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**"
+                        ).permitAll()
+
+                        // Actuator
                         .requestMatchers("/actuator/**").permitAll()
 
-                        // swagger
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // Error
+                        .requestMatchers("/error").permitAll()
 
-                        // all others
+                        // Protected APIs
                         .anyRequest().authenticated()
                 )
 
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+
                 .httpBasic(basic -> basic.disable())
+
                 .formLogin(form -> form.disable());
 
         return http.build();

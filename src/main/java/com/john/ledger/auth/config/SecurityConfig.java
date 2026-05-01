@@ -11,28 +11,20 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
-
-        httpSecurity
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
-
                 .authorizeHttpRequests(auth -> auth
-
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        .requestMatchers("/myledger-api/auth/**").permitAll()
-                        .requestMatchers("/myledger-api/public/**").permitAll()
-                        .requestMatchers("/myledger-api/actuator/**").permitAll()
-                        .requestMatchers("/myledger-api/swagger-ui/**").permitAll()
-                        .requestMatchers("/myledger-api/v3/api-docs/**").permitAll()
-
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/public/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                .httpBasic(b -> b.disable())
+                .formLogin(f -> f.disable());
 
-                .httpBasic(http -> http.disable())
-                .formLogin(form -> form.disable());
-
-        return httpSecurity.build();
+        return http.build();
     }
 }

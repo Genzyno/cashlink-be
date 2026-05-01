@@ -13,7 +13,7 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("${app.cors.allowed-origins:*}")
+    @Value("${app.cors.allowed-origins:https://myledger.techseek.in}")
     private String allowedOrigins;
 
     @Value("${app.cors.allowed-methods:GET,POST,PUT,DELETE,OPTIONS,PATCH}")
@@ -28,85 +28,86 @@ public class CorsConfig {
     @Value("${app.cors.max-age:3600}")
     private long maxAge;
 
-    /**
-     * CORS ConfigurationSource Bean - Returns the CORS configuration for all requests.
-     * Used by Spring Security's SecurityFilterChain to properly handle CORS.
-     * Allows specified origins and includes Authorization header in preflight responses.
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
         CorsConfiguration config = new CorsConfiguration();
 
-        // Configure allowed origins
-        String originsTrimmed = allowedOrigins != null ? allowedOrigins.trim() : "";
-        if (originsTrimmed.isEmpty() || "*".equals(originsTrimmed)) {
-            // Only use wildcard if credentials are NOT allowed (invalid combination otherwise)
-            if (!allowCredentials) {
-                config.addAllowedOriginPattern("*");
-            } else {
-                // With credentials=true, we must specify exact origins
-                config.addAllowedOrigin("https://myledger.techseek.in");
-                config.addAllowedOrigin("http://localhost:4200");
-                config.addAllowedOrigin("http://localhost:3000");
-                config.addAllowedOrigin("http://127.0.0.1:4200");
-            }
-        } else {
-            List<String> origins = Arrays.asList(allowedOrigins.split(","));
-            for (String origin : origins) {
-                String trimmedOrigin = origin.trim();
-                if (!trimmedOrigin.isEmpty()) {
-                    if ("*".equals(trimmedOrigin)) {
-                        if (!allowCredentials) {
-                            config.addAllowedOriginPattern("*");
-                        }
-                    } else {
-                        config.addAllowedOrigin(trimmedOrigin);
-                    }
-                }
-            }
+        // ===============================
+        // Allowed Origins
+        // ===============================
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+
+        for (String origin : origins) {
+            config.addAllowedOrigin(origin);
         }
 
-        // Parse allowed methods
-        List<String> methods = Arrays.asList(allowedMethods.split(","));
+        // Local testing optional
+        config.addAllowedOrigin("http://localhost:4200");
+        config.addAllowedOrigin("http://localhost:3000");
+
+        // ===============================
+        // Allowed Methods
+        // ===============================
+        List<String> methods = Arrays.stream(allowedMethods.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+
         for (String method : methods) {
-            String trimmedMethod = method.trim();
-            if (!trimmedMethod.isEmpty()) {
-                config.addAllowedMethod(trimmedMethod);
-            }
+            config.addAllowedMethod(method);
         }
 
-        // Parse allowed headers - CRITICAL: Must include Authorization for JWT
-        if ("*".equals(allowedHeaders)) {
+        // ===============================
+        // Allowed Headers
+        // ===============================
+        if ("*".equals(allowedHeaders.trim())) {
             config.addAllowedHeader("*");
         } else {
-            List<String> headers = Arrays.asList(allowedHeaders.split(","));
+            List<String> headers = Arrays.stream(allowedHeaders.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+
             for (String header : headers) {
-                String trimmedHeader = header.trim();
-                if (!trimmedHeader.isEmpty()) {
-                    config.addAllowedHeader(trimmedHeader);
-                }
+                config.addAllowedHeader(header);
             }
         }
 
-        // Explicitly allow Authorization header (needed for JWT preflight requests)
+        // Must allow JWT / JSON headers
         config.addAllowedHeader("Authorization");
         config.addAllowedHeader("Content-Type");
         config.addAllowedHeader("Accept");
+        config.addAllowedHeader("Origin");
+        config.addAllowedHeader("X-Requested-With");
 
-        // Allow credentials (cookies, authorization headers) - needed for JWT
+        // ===============================
+        // Exposed Headers
+        // ===============================
+        config.addExposedHeader("Authorization");
+        config.addExposedHeader("Content-Disposition");
+
+        // ===============================
+        // Credentials
+        // ===============================
         config.setAllowCredentials(allowCredentials);
-        
-        // Cache preflight responses - prevents repeated OPTIONS calls
+
+        // ===============================
+        // Preflight Cache
+        // ===============================
         config.setMaxAge(maxAge);
 
-        // IMPORTANT: Allow Authorization header to be exposed in response
-        config.addExposedHeader("Authorization");
-        config.addExposedHeader("X-Total-Count");
-        config.addExposedHeader("X-Page-Number");
+        // ===============================
+        // Apply All URLs
+        // ===============================
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
 
-        // Apply CORS configuration to all paths
         source.registerCorsConfiguration("/**", config);
+
         return source;
     }
 }

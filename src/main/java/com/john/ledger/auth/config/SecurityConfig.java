@@ -14,25 +14,22 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
 
-                .httpBasic(httpBasic -> httpBasic.disable())
-                .formLogin(form -> form.disable())
+                .cors(Customizer.withDefaults())
 
                 .authorizeHttpRequests(auth -> auth
+
+                        .requestMatchers("/myledger-api/auth/**").permitAll()
+                        .requestMatchers("/myledger-api/public/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        .requestMatchers(
-                                "/myledger-api/auth/**",
-                                "/myledger-api/auth/google",
-                                "/myledger-api/auth/google/**",
-                                "/myledger-api/public/**",
-                                "/myledger-api/actuator/**"
-                        ).permitAll()
-
                         .anyRequest().authenticated()
-                );
+                )
+
+                .httpBasic(httpBasic -> httpBasic.disable())
+
+                .formLogin(form -> form.disable());
 
         return http.build();
     }

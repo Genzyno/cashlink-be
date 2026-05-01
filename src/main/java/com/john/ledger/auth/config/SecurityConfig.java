@@ -5,12 +5,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
-@EnableWebSecurity
 public class SecurityConfig {
 
     @Bean
@@ -21,38 +18,29 @@ public class SecurityConfig {
 
                 .cors(Customizer.withDefaults())
 
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-
                 .authorizeHttpRequests(auth -> auth
+
+                        // OPTIONS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        .requestMatchers("/myledger-api/auth/**").permitAll()
-                        .requestMatchers("/myledger-api/public/**").permitAll()
+                        // AUTH APIs
+                        .requestMatchers("/auth/**").permitAll()
 
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**"
-                        ).permitAll()
+                        // PUBLIC APIs
+                        .requestMatchers("/public/**").permitAll()
 
+                        // actuator
                         .requestMatchers("/actuator/**").permitAll()
 
-                        .requestMatchers(
-                                "/",
-                                "/favicon.ico",
-                                "/error"
-                        ).permitAll()
+                        // swagger
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
+                        // all others
                         .anyRequest().authenticated()
                 )
 
                 .httpBasic(basic -> basic.disable())
-
-                .formLogin(form -> form.disable())
-
-                .logout(logout -> logout.disable());
+                .formLogin(form -> form.disable());
 
         return http.build();
     }

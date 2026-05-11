@@ -4,6 +4,7 @@ import com.john.ledger.common.util.*;
 import com.john.ledger.entry.util.PermissionScopeHelper;
 import com.john.ledger.entry.dto.request.AcceptInviteRequest;
 import com.john.ledger.entry.dto.request.RejectInviteRequest;
+import com.john.ledger.config.AppProperties;
 import com.john.ledger.entry.dto.request.UserInviteRequest;
 import com.john.ledger.entry.dto.request.UserSaveRequestDTO;
 import com.john.ledger.entry.dto.request.UserUpdateRequestDTO;
@@ -43,9 +44,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-
 @Service
 public class UserService implements IUserService {
+
+    private static final java.util.regex.Pattern EMAIL_PATTERN = java.util.regex.Pattern.compile(
+            "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}$");
 
     @Autowired
     UserRepository userRepository;
@@ -71,18 +74,15 @@ public class UserService implements IUserService {
     @Autowired
     InviteEmailService inviteEmailService;
 
-    @Value("${app.frontend.url:http://localhost:4200}")
-    private String frontendUrl;
-
-    @Value("${app.invite.expiration-days:7}")
-    private int inviteExpirationDays;
+    @Autowired
+    private AppProperties appProperties;
 
     @Override
     public ServiceResponse<UserResponseDTO> saveUser(UserSaveRequestDTO request) {
 
         try {
 
-            //validation
+            // validation
             Optional<UserEntity> existingUserName = userRepository.findByUserName(request.getUserName());
             if (existingUserName.isPresent()) {
                 return ServiceResponse.failureResponse(409, "User Name Already Exists");
@@ -106,7 +106,7 @@ public class UserService implements IUserService {
             // Convert DTO → Entity
             UserEntity userEntity = UserMapper.toSaveEntity(request, roleOpt.get());
 
-            //generate random password
+            // generate random password
             String userTempPassword = PasswordGenerator.generate6CharCode();
             userEntity.setPassword(userTempPassword);
 
@@ -122,21 +122,33 @@ public class UserService implements IUserService {
         }
     }
 
-
     @Override
     public ServiceResponse<PaginatedResponse<UserResponseDTO>> getPaginatedUser(int page, int size) {
         try {
             PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdTime"));
             Page<UserEntity> userEntityPage;
-            if (permissionScopeHelper.isAssignedScope("team", "view") && permissionScopeHelper.getCurrentUserId().isPresent()) {
-                List<java.util.UUID> allowedIds = bookRepository.findUserIdsSharingBookWith(permissionScopeHelper.getCurrentUserId().get());
+
+            Optional<UUID> currentUserId = permissionScopeHelper.getCurrentUserId();
+            if (currentUserId.isEmpty()) {
+                return ServiceResponse.failureResponse(401, "Unauthorized");
+            }
+
+            UserEntity currentUser = userRepository.findById(currentUserId.get()).orElse(null);
+            if (currentUser == null) {
+                return ServiceResponse.failureResponse(404, "User not found");
+            }
+
+            UUID effectiveAdminId = (currentUser.getAdminId() != null) ? currentUser.getAdminId() : currentUser.getId();
+
+            if (permissionScopeHelper.isAssignedScope("team", "view")) {
+                List<java.util.UUID> allowedIds = bookRepository.findUserIdsSharingBookWith(currentUserId.get());
                 if (allowedIds.isEmpty()) {
                     userEntityPage = Page.empty(pageRequest);
                 } else {
                     userEntityPage = userRepository.findByIdIn(allowedIds, pageRequest);
                 }
             } else {
-                userEntityPage = userRepository.findAll(pageRequest);
+                userEntityPage = userRepository.findByAdminIdOrId(effectiveAdminId, pageRequest);
             }
             Page<UserResponseDTO> userPage = userEntityPage.map(UserMapper::toResponse);
             if (userPage.isEmpty()) {
@@ -150,13 +162,12 @@ public class UserService implements IUserService {
         }
     }
 
-
     @Override
     public ServiceResponse<UserResponseDTO> updateUser(java.util.UUID id, UserUpdateRequestDTO request) {
 
         try {
 
-            //validation
+            // validation
             Optional<UserEntity> existingUser = userRepository.findById(id);
             if (existingUser.isEmpty()) {
                 return ServiceResponse.failureResponse(404, "User Not Found");
@@ -213,10 +224,22 @@ public class UserService implements IUserService {
         try {
             PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdTime"));
             Page<UserEntity> userEntityPage;
+
+            Optional<UUID> currentUserId = permissionScopeHelper.getCurrentUserId();
+            if (currentUserId.isEmpty()) {
+                return ServiceResponse.failureResponse(401, "Unauthorized");
+            }
+
+            UserEntity currentUser = userRepository.findById(currentUserId.get()).orElse(null);
+            if (currentUser == null) {
+                return ServiceResponse.failureResponse(404, "User not found");
+            }
+
+            UUID effectiveAdminId = (currentUser.getAdminId() != null) ? currentUser.getAdminId() : currentUser.getId();
+
             boolean assignedScope = permissionScopeHelper.isAssignedScope("team", "view");
-            Optional<java.util.UUID> userId = permissionScopeHelper.getCurrentUserId();
-            if (assignedScope && userId.isPresent()) {
-                List<java.util.UUID> allowedIds = bookRepository.findUserIdsSharingBookWith(userId.get());
+            if (assignedScope) {
+                List<java.util.UUID> allowedIds = bookRepository.findUserIdsSharingBookWith(currentUserId.get());
                 if (allowedIds.isEmpty()) {
                     userEntityPage = Page.empty(pageRequest);
                 } else if (searchTerm == null || searchTerm.trim().isEmpty()) {
@@ -226,9 +249,10 @@ public class UserService implements IUserService {
                 }
             } else {
                 if (searchTerm == null || searchTerm.trim().isEmpty()) {
-                    userEntityPage = userRepository.findAll(pageRequest);
+                    userEntityPage = userRepository.findByAdminIdOrId(effectiveAdminId, pageRequest);
                 } else {
-                    userEntityPage = userRepository.searchUsers(searchTerm.trim(), pageRequest);
+                    userEntityPage = userRepository.findByAdminIdOrIdAndSearch(effectiveAdminId, searchTerm.trim(),
+                            pageRequest);
                 }
             }
             Page<UserResponseDTO> dtoPage = userEntityPage.map(UserMapper::toResponse);
@@ -257,7 +281,8 @@ public class UserService implements IUserService {
             // Resolve book IDs: all books for business, or specific bookIds
             List<UUID> resolvedBookIds = new ArrayList<>();
             if (Boolean.TRUE.equals(request.getAllBooks()) && request.getBusinessId() != null) {
-                List<BookEntity> businessBooks = bookRepository.findByBusinessId(request.getBusinessId(), Pageable.unpaged()).getContent();
+                List<BookEntity> businessBooks = bookRepository
+                        .findByBusinessId(request.getBusinessId(), Pageable.unpaged()).getContent();
                 resolvedBookIds = businessBooks.stream().map(BookEntity::getId).collect(Collectors.toList());
             } else if (request.getBookIds() != null && !request.getBookIds().isEmpty()) {
                 List<BookEntity> found = bookRepository.findAllById(request.getBookIds());
@@ -265,6 +290,10 @@ public class UserService implements IUserService {
                     return ServiceResponse.failureResponse(404, "One or more book IDs not found.");
                 }
                 resolvedBookIds = new ArrayList<>(request.getBookIds());
+            }
+
+            if (resolvedBookIds.isEmpty()) {
+                return ServiceResponse.failureResponse(400, "Please choose at least one book to invite users.");
             }
 
             // Build "BookName (BusinessName)" for email
@@ -279,14 +308,22 @@ public class UserService implements IUserService {
                 }
             }
 
+            int inviteExpirationDays = appProperties.getInvite().getExpirationDays() > 0
+                    ? appProperties.getInvite().getExpirationDays()
+                    : 7;
             LocalDateTime expiresAt = LocalDateTime.now().plusDays(inviteExpirationDays);
-            String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+            String fUrl = appProperties.getFrontendUrl();
+            if (fUrl == null || fUrl.isBlank())
+                fUrl = "http://localhost:4200";
+            String baseUrl = fUrl.endsWith("/") ? fUrl : fUrl + "/";
             String acceptPath = "accept-invite";
             String rejectPath = "reject-invite";
 
             for (UserInviteRequest.InviteItem item : request.getInvites()) {
                 String email = item.getEmail() == null ? "" : item.getEmail().trim().toLowerCase();
-                if (email.isEmpty()) continue;
+                if (email.isEmpty() || !EMAIL_PATTERN.matcher(email).matches()) {
+                    return ServiceResponse.failureResponse(400, "Invalid email format: " + email);
+                }
 
                 if (userRepository.findByUserEmail(email).isPresent()) {
                     return ServiceResponse.failureResponse(409, "User already exists with email: " + email);
@@ -294,15 +331,22 @@ public class UserService implements IUserService {
                 if (userInviteRepository.existsByEmailAndStatus(email, UserInviteEntity.InviteStatus.PENDING)) {
                     return ServiceResponse.failureResponse(409, "Pending invite already exists for: " + email);
                 }
-                if (item.getRoleId() != null) {
-                    if (roleRepository.findById(item.getRoleId()).isEmpty()) {
-                        return ServiceResponse.failureResponse(404, "Role not found for email: " + email);
-                    }
+                if (item.getRoleId() == null) {
+                    return ServiceResponse.failureResponse(400, "Role is required for email: " + email);
+                }
+                if (roleRepository.findById(item.getRoleId()).isEmpty()) {
+                    return ServiceResponse.failureResponse(404, "Role not found for email: " + email);
                 }
 
                 String token = UUID.randomUUID().toString().replace("-", "");
-                RoleEntity role = item.getRoleId() != null ? roleRepository.findById(item.getRoleId()).orElse(null) : null;
+                RoleEntity role = item.getRoleId() != null ? roleRepository.findById(item.getRoleId()).orElse(null)
+                        : null;
                 String roleName = role != null ? role.getRoleName() : null;
+
+                UserEntity currentUser = userRepository.findById(currentUserId).orElse(null);
+                UUID adminIdToStore = (currentUser != null)
+                        ? (currentUser.getAdminId() != null ? currentUser.getAdminId() : currentUser.getId())
+                        : null;
 
                 UserInviteEntity invite = UserInviteEntity.builder()
                         .email(email)
@@ -311,6 +355,7 @@ public class UserService implements IUserService {
                         .expiresAt(expiresAt)
                         .status(UserInviteEntity.InviteStatus.PENDING)
                         .invitedByUserId(currentUserId)
+                        .adminId(adminIdToStore)
                         .build();
                 userInviteRepository.save(invite);
 
@@ -324,7 +369,8 @@ public class UserService implements IUserService {
                 String acceptLink = baseUrl + acceptPath + "?token=" + token;
                 String rejectLink = baseUrl + rejectPath + "?token=" + token;
                 String invitedByName = userRepository.findById(currentUserId).map(UserEntity::getUserName).orElse(null);
-                inviteEmailService.sendInviteEmail(email, roleName, bookAndBusinessLines, acceptLink, rejectLink, invitedByName);
+                inviteEmailService.sendInviteEmail(email, roleName, bookAndBusinessLines, acceptLink, rejectLink,
+                        invitedByName);
             }
             return ServiceResponse.successResponse(200, "Invitation emails sent successfully.", null);
         } catch (Exception e) {
@@ -348,7 +394,8 @@ public class UserService implements IUserService {
             UserInviteEntity invite = opt.get();
             if (invite.getStatus() != UserInviteEntity.InviteStatus.PENDING) {
                 return ServiceResponse.successResponse(200, "Invite already used or expired.",
-                        InviteDetailsResponse.builder().valid(false).message("This invitation has already been used or has expired.").build());
+                        InviteDetailsResponse.builder().valid(false)
+                                .message("This invitation has already been used or has expired.").build());
             }
             if (LocalDateTime.now().isAfter(invite.getExpiresAt())) {
                 invite.setStatus(UserInviteEntity.InviteStatus.EXPIRED);
@@ -360,7 +407,7 @@ public class UserService implements IUserService {
                     ? roleRepository.findById(invite.getRoleId()).map(RoleEntity::getRoleName).orElse(null)
                     : null;
             InviteDetailsResponse details = InviteDetailsResponse.builder()
-                    .email(com.john.ledger.common.util.EmailMasker.mask(invite.getEmail()))
+                    .email(invite.getEmail())
                     .roleId(invite.getRoleId())
                     .roleName(roleName)
                     .valid(true)
@@ -409,7 +456,8 @@ public class UserService implements IUserService {
                 return ServiceResponse.failureResponse(404, "Role no longer exists.");
             }
 
-            // user_mobile column is varchar(15); use unique 15-char placeholder when not provided
+            // user_mobile column is varchar(15); use unique 15-char placeholder when not
+            // provided
             String mobile = (request.getUserMobile() != null && !request.getUserMobile().trim().isEmpty())
                     ? request.getUserMobile().trim()
                     : ("P" + invite.getToken().substring(0, Math.min(14, invite.getToken().length())));
@@ -426,6 +474,7 @@ public class UserService implements IUserService {
                     .userMobile(mobile)
                     .password(request.getPassword())
                     .roleEntity(role)
+                    .adminId(invite.getAdminId())
                     .status(true)
                     .build();
             UserEntity saved = userRepository.save(user);
@@ -435,11 +484,13 @@ public class UserService implements IUserService {
             userInviteRepository.save(invite);
 
             // Assign user to books linked to this invite
-            List<UserInviteBookEntity> inviteBooks = userInviteBookRepository.findByInviteIdOrderByBookId(invite.getId());
+            List<UserInviteBookEntity> inviteBooks = userInviteBookRepository
+                    .findByInviteIdOrderByBookId(invite.getId());
             for (UserInviteBookEntity ib : inviteBooks) {
                 bookRepository.findById(ib.getBookId()).ifPresent(book -> {
                     Set<UserEntity> assigned = book.getAssignedUsers();
-                    if (assigned == null) assigned = new java.util.HashSet<>();
+                    if (assigned == null)
+                        assigned = new java.util.HashSet<>();
                     assigned.add(saved);
                     book.setAssignedUsers(assigned);
                     bookRepository.save(book);
@@ -447,7 +498,8 @@ public class UserService implements IUserService {
             }
 
             UserResponseDTO responseDto = UserMapper.toResponse(saved);
-            return ServiceResponse.successResponse(201, "Invitation accepted. Account created successfully.", responseDto);
+            return ServiceResponse.successResponse(201, "Invitation accepted. Account created successfully.",
+                    responseDto);
         } catch (Exception e) {
             e.printStackTrace();
             return ServiceResponse.failureResponse(500, ResponseMessages.INTERNAL_ERROR);
@@ -471,7 +523,8 @@ public class UserService implements IUserService {
             invite.setStatus(UserInviteEntity.InviteStatus.REJECTED);
             invite.setRejectedAt(LocalDateTime.now());
             userInviteRepository.save(invite);
-            return ServiceResponse.successResponse(200, "Invitation declined. The admin can send a new invite to this email if needed.", null);
+            return ServiceResponse.successResponse(200,
+                    "Invitation declined. The admin can send a new invite to this email if needed.", null);
         } catch (Exception e) {
             e.printStackTrace();
             return ServiceResponse.failureResponse(500, ResponseMessages.INTERNAL_ERROR);
@@ -481,24 +534,51 @@ public class UserService implements IUserService {
     @Override
     public ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>> getAcceptedInviteNotifications(
             int page, int size, UUID businessId) {
+        return getInviteNotificationsByStatus(page, size, businessId, List.of(UserInviteEntity.InviteStatus.ACCEPTED));
+    }
+
+    @Override
+    public ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>> getRejectedInviteNotifications(
+            int page, int size, UUID businessId) {
+        return getInviteNotificationsByStatus(page, size, businessId, List.of(UserInviteEntity.InviteStatus.REJECTED));
+    }
+
+    @Override
+    public ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>> getPendingInviteNotifications(
+            int page, int size, UUID businessId) {
+        return getInviteNotificationsByStatus(page, size, businessId, List.of(UserInviteEntity.InviteStatus.PENDING));
+    }
+
+    private ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>> getInviteNotificationsByStatus(
+            int page, int size, UUID businessId, List<UserInviteEntity.InviteStatus> statuses) {
         try {
             Optional<UUID> currentUserIdOpt = permissionScopeHelper.getCurrentUserId();
             if (currentUserIdOpt.isEmpty()) {
                 return ServiceResponse.failureResponse(401, "Authentication required.");
             }
-            UUID invitedByUserId = currentUserIdOpt.get();
-            List<UserInviteEntity.InviteStatus> statuses = List.of(
-                    UserInviteEntity.InviteStatus.ACCEPTED,
-                    UserInviteEntity.InviteStatus.REJECTED);
-            Sort sort = Sort.by(
-                    Sort.Order.desc("acceptedAt").nullsLast(),
-                    Sort.Order.desc("rejectedAt").nullsLast());
+            UUID currentUserId = currentUserIdOpt.get();
+            UserEntity currentUser = userRepository.findById(currentUserId).orElse(null);
+            UUID adminId = (currentUser != null) ? currentUser.getAdminId() : null;
+
+            if (adminId == null) {
+                return ServiceResponse.successResponse(200, "Success", PaginatedResponse.empty());
+            }
+
+            Sort sort;
+            if (statuses.contains(UserInviteEntity.InviteStatus.ACCEPTED)) {
+                sort = Sort.by(Sort.Order.desc("acceptedAt").nullsLast());
+            } else if (statuses.contains(UserInviteEntity.InviteStatus.REJECTED)) {
+                sort = Sort.by(Sort.Order.desc("rejectedAt").nullsLast());
+            } else {
+                sort = Sort.by(Sort.Order.desc("createdTime"));
+            }
+
             PageRequest pageRequest = PageRequest.of(page, size, sort);
             Page<UserInviteEntity> invitePage = userInviteRepository
-                    .findByInvitedByUserIdAndStatusInAndOptionalBusiness(invitedByUserId, statuses, businessId, pageRequest);
+                    .findByAdminIdAndStatusInAndOptionalBusiness(adminId, statuses, businessId, pageRequest);
 
             List<AcceptedInviteNotificationResponse> content = invitePage.getContent().stream()
-                    .map(invite -> mapInviteToNotification(invite))
+                    .map(this::mapInviteToNotification)
                     .collect(Collectors.toList());
             PaginatedResponse<AcceptedInviteNotificationResponse> paginated = PaginationUtil.createPaginatedResponse(
                     new PageImpl<>(content, pageRequest, invitePage.getTotalElements()));
@@ -536,14 +616,15 @@ public class UserService implements IUserService {
             Optional<BookEntity> firstBook = bookRepository.findById(inviteBooks.get(0).getBookId());
             if (firstBook.isPresent()) {
                 businessId = firstBook.get().getBusinessId();
-                businessName = businessRepository.findById(businessId).map(com.john.ledger.entry.entity.BusinessEntity::getBusinessName).orElse(null);
+                businessName = businessRepository.findById(businessId)
+                        .map(com.john.ledger.entry.entity.BusinessEntity::getBusinessName).orElse(null);
             }
         }
         return AcceptedInviteNotificationResponse.builder()
                 .id(invite.getId().toString())
                 .userId(userId)
                 .userName(userName)
-                .userEmail(com.john.ledger.common.util.EmailMasker.mask(invite.getEmail()))
+                .userEmail(invite.getEmail())
                 .acceptedAt(acceptedAtIso)
                 .rejectedAt(rejectedAtIso)
                 .status(invite.getStatus().name())

@@ -24,8 +24,8 @@ import com.john.ledger.entry.repository.TransactionRepository;
 import com.john.ledger.entry.repository.UserRepository;
 import com.john.ledger.entry.service.ITransactionService;
 import com.john.ledger.entry.specification.TransactionFilterSpecification;
+import com.john.ledger.config.AppProperties;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -70,11 +70,15 @@ public class TransactionService implements ITransactionService {
     @Autowired
     UserRepository userRepository;
 
-    @Value("${app.upload.dir}")
-    private String uploadDir;
+    @Autowired
+    private AppProperties appProperties;
 
     @PostConstruct
     public void init() {
+        String uploadDir = appProperties.getUpload().getDir();
+        if (uploadDir == null || uploadDir.isBlank()) {
+            uploadDir = "D:/MY_LEDGER_FILES/BUSINESS"; // Default fallback
+        }
         File uploadPath = new File(uploadDir);
         if (!uploadPath.exists()) {
             uploadPath.mkdirs();
@@ -755,7 +759,10 @@ public class TransactionService implements ITransactionService {
      * Path: D:/MY_LEDGER_FILES/BUSINESS/{businessId}/{bookId}/txn_{transactionId}/{uuid}_{originalFileName}
      */
     private void saveFilesToDisk(TransactionEntity transaction, MultipartFile[] files) throws IOException {
-
+        String uploadDir = appProperties.getUpload().getDir();
+        if (uploadDir == null || uploadDir.isBlank()) {
+            uploadDir = "D:/MY_LEDGER_FILES/BUSINESS";
+        }
         Path dirPath = Paths.get(uploadDir,
                 String.valueOf(transaction.getBusinessId()),
                 String.valueOf(transaction.getBookId()),
@@ -797,6 +804,10 @@ public class TransactionService implements ITransactionService {
             }
 
             // Try to delete the transaction directory if empty
+            String uploadDir = appProperties.getUpload().getDir();
+            if (uploadDir == null || uploadDir.isBlank()) {
+                uploadDir = "D:/MY_LEDGER_FILES/BUSINESS";
+            }
             Path txnDir = Paths.get(uploadDir,
                     String.valueOf(transaction.getBusinessId()),
                     String.valueOf(transaction.getBookId()),

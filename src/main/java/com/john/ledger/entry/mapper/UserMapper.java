@@ -1,6 +1,5 @@
 package com.john.ledger.entry.mapper;
 
-import com.john.ledger.common.util.EmailMasker;
 import com.john.ledger.entry.dto.response.UserResponseDTO;
 import com.john.ledger.entry.dto.request.UserSaveRequestDTO;
 import com.john.ledger.entry.entity.RoleEntity;
@@ -22,13 +21,14 @@ public class UserMapper {
         UserResponseDTO dto = new UserResponseDTO();
         dto.setId(entity.getId());
         dto.setUserName(entity.getUserName());
-        dto.setUserEmail(EmailMasker.mask(entity.getUserEmail()));
+        dto.setUserEmail(entity.getUserEmail());
         dto.setUserMobile(entity.getUserMobile());
         dto.setStatus(entity.getStatus());
         if (entity.getRoleEntity() != null) {
             dto.setRoleId(entity.getRoleEntity().getId());
             dto.setRoleName(entity.getRoleEntity().getRoleName());
         }
+        dto.setAdminId(entity.getAdminId());
         return dto;
     }
 }

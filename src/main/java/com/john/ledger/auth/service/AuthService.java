@@ -7,6 +7,8 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.john.ledger.auth.dto.LedgerAuthTokenResponse;
 import com.john.ledger.auth.dto.LedgerAuthUserInfo;
 import com.john.ledger.auth.dto.GoogleCallbackResult;
+import com.john.ledger.auth.dto.LoginResult;
+import com.john.ledger.auth.dto.SendOtpResult;
 import com.john.ledger.auth.dto.VerifyOtpResult;
 import com.john.ledger.auth.entity.PasswordResetTokenEntity;
 import com.john.ledger.auth.repository.PasswordResetTokenRepository;
@@ -15,8 +17,8 @@ import com.john.ledger.entry.entity.UserEntity;
 import com.john.ledger.entry.repository.RoleRepository;
 import com.john.ledger.entry.repository.UserRepository;
 
+import com.john.ledger.config.AppProperties;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,39 +62,44 @@ public class AuthService {
     @Autowired
     private RoleRepository roleRepository;
 
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private AppProperties appProperties;
+
     private static final SecureRandom RANDOM = new SecureRandom();
-    private static final int PASSWORD_RESET_EXPIRATION_HOURS = 1;
-    private static final int PASSWORD_RESET_RATE_LIMIT_PER_HOUR = 3;
-
-    @Value("${app.frontend.url:http://localhost:3000}")
-    private String frontendUrl;
-
-    @Value("${app.google.client-id:}")
-    private String googleClientId;
-    @Value("${app.google.client-secret:}")
-    private String googleClientSecret;
-    @Value("${app.google.redirect-uri:}")
-    private String googleRedirectUri;
-    /** Comma-separated extra OAuth client IDs accepted as id_token audience (e.g. Android client ID). */
-    @Value("${app.google.additional-audiences:}")
-    private String googleAdditionalAudiences;
 
     private static final String GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
     private static final String GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
     private static final String GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
     private static final RestTemplate REST_TEMPLATE = new RestTemplate();
 
-    public boolean sendOtp(String email, String channel, String clientId) {
-        if (email == null || email.isBlank()) return false;
+    public SendOtpResult sendOtp(String email, String channel, String clientId, String intent) {
+        if (email == null || email.isBlank()) return SendOtpResult.invalidEmail();
         email = email.toLowerCase().trim();
-        if (!EMAIL_PATTERN.matcher(email).matches()) return false;
-        if (channel == null || channel.isBlank() || clientId == null || clientId.isBlank()) return false;
+        if (email.contains("***")) return SendOtpResult.invalidEmail();
+        if (!EMAIL_PATTERN.matcher(email).matches()) return SendOtpResult.invalidEmail();
+        if (channel == null || channel.isBlank() || clientId == null || clientId.isBlank()) return SendOtpResult.invalidEmail();
+
+        boolean isLogin = "login".equalsIgnoreCase(intent != null ? intent.trim() : "");
+        boolean isRegister = "register".equalsIgnoreCase(intent != null ? intent.trim() : "");
+
+        if (isLogin) {
+            if (userRepository.findByUserEmail(email).isEmpty()) {
+                return SendOtpResult.userNotFound();
+            }
+        } else if (isRegister) {
+            if (userRepository.findByUserEmail(email).isPresent()) {
+                return SendOtpResult.userAlreadyExists();
+            }
+        }
 
         String otp = otpService.generateAndStore(email, channel, clientId);
-        if (otp == null) return false; // rate limited
+        if (otp == null) return SendOtpResult.rateLimited(); // rate limited
         // Send email asynchronously - don't wait for it
         otpEmailService.sendOtpToEmail(email, otp);
-        return true;
+        return SendOtpResult.success();
     }
 
     private static final String SUPER_ADMIN_ROLE_NAME = "Super Admin";
@@ -127,6 +134,51 @@ public class AuthService {
             if (!Boolean.TRUE.equals(user.getStatus())) return VerifyOtpResult.invalidOtp();
         }
 
+        return VerifyOtpResult.success(generateTokensForUser(user));
+    }
+
+    public LoginResult loginWithPassword(String email, String password, String channel, String clientId) {
+        if (email == null || email.isBlank() || password == null || password.isBlank()) {
+            return LoginResult.invalidCredentials();
+        }
+        email = email.toLowerCase().trim();
+        Optional<UserEntity> userOpt = userRepository.findByUserEmailWithRole(email);
+        if (userOpt.isEmpty()) {
+            return LoginResult.userNotFound();
+        }
+        UserEntity user = userOpt.get();
+        if (!Boolean.TRUE.equals(user.getStatus())) {
+            return LoginResult.userInactive();
+        }
+
+        boolean passwordMatches = false;
+        String storedPassword = user.getPassword();
+
+        if (storedPassword != null && storedPassword.startsWith("$2")) {
+            try {
+                passwordMatches = passwordEncoder.matches(password, storedPassword);
+            } catch (Exception e) {
+                passwordMatches = false;
+            }
+        } else {
+            // Fallback for legacy plain text passwords
+            passwordMatches = password.equals(storedPassword);
+        }
+
+        if (!passwordMatches) {
+            return LoginResult.invalidCredentials();
+        }
+
+        // Auto-upgrade plain text password to BCrypt on successful login
+        if (storedPassword != null && !storedPassword.startsWith("$2")) {
+            user.setPassword(passwordEncoder.encode(password));
+            userRepository.save(user);
+        }
+
+        return LoginResult.success(generateTokensForUser(user));
+    }
+
+    private LedgerAuthTokenResponse generateTokensForUser(UserEntity user) {
         String userId = user.getId().toString();
         String name = user.getUserName() != null ? user.getUserName() : "";
         String accessToken = jwtService.createAccessToken(userId, user.getUserEmail(), name);
@@ -145,20 +197,19 @@ public class AuthService {
         LedgerAuthUserInfo userInfo = LedgerAuthUserInfo.builder()
                 .id(userId)
                 .name(name)
-                .email(com.john.ledger.common.util.EmailMasker.mask(user.getUserEmail()))
+                .email(user.getUserEmail())
                 .roleName(roleName)
                 .permissions(permissions)
                 .permissionScopes(permissionScopes)
                 .build();
 
-        LedgerAuthTokenResponse response = LedgerAuthTokenResponse.builder()
+        return LedgerAuthTokenResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .expiresIn(jwtService.getAccessExpirationSec())
                 .tokenType("Bearer")
                 .user(userInfo)
                 .build();
-        return VerifyOtpResult.success(response);
     }
 
     /** Create a new user with Super Admin role. No business created. */
@@ -174,10 +225,12 @@ public class AuthService {
                 .userName(name)
                 .userEmail(email)
                 .userMobile(mobile)
-                .password(password)
+                .password(passwordEncoder.encode(password))
                 .roleEntity(roleOpt.get())
                 .status(true)
                 .build();
+        user = userRepository.save(user);
+        user.setAdminId(user.getId());
         return userRepository.save(user);
     }
 
@@ -205,7 +258,7 @@ public class AuthService {
         LedgerAuthUserInfo userInfo = LedgerAuthUserInfo.builder()
                 .id(user.getId().toString())
                 .name(user.getUserName() != null ? user.getUserName() : "")
-                .email(com.john.ledger.common.util.EmailMasker.mask(user.getUserEmail()))
+                .email(user.getUserEmail())
                 .roleName(roleName)
                 .permissions(permissions)
                 .permissionScopes(permissionScopes)
@@ -240,7 +293,7 @@ public class AuthService {
         return LedgerAuthUserInfo.builder()
                 .id(user.getId().toString())
                 .name(user.getUserName() != null ? user.getUserName() : "")
-                .email(com.john.ledger.common.util.EmailMasker.mask(user.getUserEmail()))
+                .email(user.getUserEmail())
                 .roleName(roleName)
                 .permissions(permissions)
                 .permissionScopes(permissionScopes)
@@ -248,21 +301,25 @@ public class AuthService {
     }
 
     /**
-     * Forgot password: send reset link to email. Always returns true for valid email format to avoid email enumeration.
-     * Rate limited per email. Link expires in 1 hour.
+     * Forgot password: send reset link to email.
+     * Checks if account exists. Rate limited per email. Link expires in 1 hour.
      */
     @Transactional
-    public boolean forgotPassword(String email) {
-        if (email == null || email.isBlank()) return false;
+    public int forgotPassword(String email) {
+        if (email == null || email.isBlank()) return -1;
         email = email.toLowerCase().trim();
-        if (!EMAIL_PATTERN.matcher(email).matches()) return false;
+        if (!EMAIL_PATTERN.matcher(email).matches()) return -1;
+
+        // Check if user exists
+        Optional<UserEntity> userOpt = userRepository.findByUserEmail(email);
+        if (userOpt.isEmpty()) return 0;
 
         LocalDateTime since = LocalDateTime.now().minusHours(1);
         long count = passwordResetTokenRepository.countByEmailSince(email, since);
-        if (count >= PASSWORD_RESET_RATE_LIMIT_PER_HOUR) return false;
+        if (count >= 3) return -1;
 
         String token = generateSecureToken();
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(PASSWORD_RESET_EXPIRATION_HOURS);
+        LocalDateTime expiresAt = LocalDateTime.now().plusHours(1);
         PasswordResetTokenEntity entity = PasswordResetTokenEntity.builder()
                 .email(email)
                 .token(token)
@@ -270,7 +327,32 @@ public class AuthService {
                 .used(false)
                 .build();
         passwordResetTokenRepository.save(entity);
-        emailVerificationEmailService.sendPasswordResetEmail(email, token, frontendUrl);
+
+        String baseUrl = appProperties.getFrontendUrl();
+        if (baseUrl == null || baseUrl.isBlank()) baseUrl = "http://localhost:4200";
+
+        emailVerificationEmailService.sendPasswordResetEmail(email, token, baseUrl);
+        return 1;
+    }
+
+    @Transactional
+    public boolean resetPassword(String token, String newPassword) {
+        if (token == null || token.isBlank() || newPassword == null || newPassword.isBlank()) return false;
+        Optional<PasswordResetTokenEntity> tokenOpt = passwordResetTokenRepository.findByToken(token);
+        if (tokenOpt.isEmpty()) return false;
+        PasswordResetTokenEntity entity = tokenOpt.get();
+        if (Boolean.TRUE.equals(entity.getUsed())) return false;
+        if (entity.getExpiresAt().isBefore(LocalDateTime.now())) return false;
+
+        Optional<UserEntity> userOpt = userRepository.findByUserEmail(entity.getEmail());
+        if (userOpt.isEmpty()) return false;
+
+        UserEntity user = userOpt.get();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        entity.setUsed(true);
+        passwordResetTokenRepository.save(entity);
         return true;
     }
 
@@ -289,8 +371,11 @@ public class AuthService {
         email = email.toLowerCase().trim();
         if (!EMAIL_PATTERN.matcher(email).matches()) return false;
 
+        String baseUrl = appProperties.getFrontendUrl();
+        if (baseUrl == null || baseUrl.isBlank()) baseUrl = "http://localhost:4200";
+
         // Send verification email asynchronously - don't wait for it
-        return emailVerificationService.generateAndSendVerificationToken(email, frontendUrl);
+        return emailVerificationService.generateAndSendVerificationToken(email, baseUrl);
     }
 
     /**
@@ -315,6 +400,8 @@ public class AuthService {
      * @param redirectUriFrontend URL-encoded frontend redirect (where to send user with tokens after Google sign-in)
      */
     public String buildGoogleAuthorizationUrl(String redirectUriFrontend) {
+        String googleClientId = appProperties.getGoogle().getClientId();
+        String googleRedirectUri = appProperties.getGoogle().getRedirectUri();
         if (googleClientId == null || googleClientId.isBlank() || googleRedirectUri == null || googleRedirectUri.isBlank()) {
             return null;
         }
@@ -334,11 +421,15 @@ public class AuthService {
      * If user is new, create user with Super Admin role (no business) and issue JWT.
      */
     public GoogleCallbackResult handleGoogleCallback(String code, String state) {
-        if (code == null || code.isBlank() || googleClientId == null || googleClientId.isBlank()
-                || googleClientSecret == null || googleClientSecret.isBlank() || googleRedirectUri == null || googleRedirectUri.isBlank()) {
-            return GoogleCallbackResult.error();
-        }
         try {
+            String googleClientId = appProperties.getGoogle().getClientId();
+            String googleClientSecret = appProperties.getGoogle().getClientSecret();
+            String googleRedirectUri = appProperties.getGoogle().getRedirectUri();
+
+            if (code == null || code.isBlank() || googleClientId == null || googleClientId.isBlank()
+                    || googleClientSecret == null || googleClientSecret.isBlank() || googleRedirectUri == null || googleRedirectUri.isBlank()) {
+                return GoogleCallbackResult.error();
+            }
             MultiValueMap<String, String> tokenRequest = new LinkedMultiValueMap<>();
             tokenRequest.add("client_id", googleClientId);
             tokenRequest.add("client_secret", googleClientSecret);
@@ -393,6 +484,9 @@ public class AuthService {
      * Configure SHA-1 + Android OAuth client in Google Cloud; use Web client ID in requestIdToken().
      */
     public LedgerAuthTokenResponse loginWithGoogleIdToken(String idTokenString) {
+        String googleClientId = appProperties.getGoogle().getClientId();
+        String googleAdditionalAudiences = appProperties.getGoogle().getAdditionalAudiences();
+
         if (idTokenString == null || idTokenString.isBlank() || googleClientId == null || googleClientId.isBlank()) {
             return null;
         }
@@ -463,7 +557,7 @@ public class AuthService {
         LedgerAuthUserInfo userInfoDto = LedgerAuthUserInfo.builder()
                 .id(userId)
                 .name(user.getUserName() != null ? user.getUserName() : "")
-                .email(com.john.ledger.common.util.EmailMasker.mask(user.getUserEmail()))
+                .email(user.getUserEmail())
                 .roleName(roleName)
                 .permissions(permissions)
                 .permissionScopes(permissionScopes)
@@ -490,10 +584,12 @@ public class AuthService {
                 .userName(userName)
                 .userEmail(email)
                 .userMobile(mobile)
-                .password(password)
+                .password(passwordEncoder.encode(password))
                 .roleEntity(roleOpt.get())
                 .status(true)
                 .build();
+        user = userRepository.save(user);
+        user.setAdminId(user.getId());
         return userRepository.save(user);
     }
 }

@@ -26,4 +26,8 @@ public class PaginatedResponse<T> {
     public void setMeta(PaginationMeta meta) {
         this.meta = meta;
     }
+
+    public static <T> PaginatedResponse<T> empty() {
+        return new PaginatedResponse<>(java.util.Collections.emptyList(), new PaginationMeta(0, 0, 0, 0, true, true, 0));
+    }
 }

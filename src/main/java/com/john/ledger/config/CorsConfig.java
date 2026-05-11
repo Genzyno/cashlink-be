@@ -1,6 +1,7 @@
 package com.john.ledger.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.john.ledger.config.AppProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -13,20 +14,8 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("${app.cors.allowed-origins:*}")
-    private String allowedOrigins;
-
-    @Value("${app.cors.allowed-methods:GET,POST,PUT,DELETE,OPTIONS,PATCH}")
-    private String allowedMethods;
-
-    @Value("${app.cors.allowed-headers:*}")
-    private String allowedHeaders;
-
-    @Value("${app.cors.allow-credentials:true}")
-    private boolean allowCredentials;
-
-    @Value("${app.cors.max-age:3600}")
-    private long maxAge;
+    @Autowired
+    private AppProperties appProperties;
 
     /**
      * CORS ConfigurationSource Bean - Returns the CORS configuration for all requests.
@@ -39,35 +28,32 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         // Configure allowed origins
+        String allowedOrigins = appProperties.getCors().getAllowedOrigins();
         String originsTrimmed = allowedOrigins != null ? allowedOrigins.trim() : "";
         if (originsTrimmed.isEmpty() || "*".equals(originsTrimmed)) {
-            // Only use wildcard if credentials are NOT allowed (invalid combination otherwise)
-            if (!allowCredentials) {
-                config.addAllowedOriginPattern("*");
-            } else {
-                // With credentials=true, we must specify exact origins
-                config.addAllowedOrigin("https://myledger.techseek.in");
-                config.addAllowedOrigin("http://localhost:4200");
-                config.addAllowedOrigin("http://localhost:3000");
-                config.addAllowedOrigin("http://127.0.0.1:4200");
-            }
+            config.addAllowedOriginPattern("*");
         } else {
             List<String> origins = Arrays.asList(allowedOrigins.split(","));
             for (String origin : origins) {
                 String trimmedOrigin = origin.trim();
                 if (!trimmedOrigin.isEmpty()) {
                     if ("*".equals(trimmedOrigin)) {
-                        if (!allowCredentials) {
-                            config.addAllowedOriginPattern("*");
-                        }
+                        config.addAllowedOriginPattern("*");
                     } else {
                         config.addAllowedOrigin(trimmedOrigin);
                     }
                 }
             }
+            // Always allow localhost in dev
+            config.addAllowedOrigin("http://localhost:4200");
+            config.addAllowedOrigin("http://127.0.0.1:4200");
         }
 
         // Parse allowed methods
+        String allowedMethods = appProperties.getCors().getAllowedMethods();
+        if (allowedMethods == null || allowedMethods.isBlank()) {
+            allowedMethods = "GET,POST,PUT,DELETE,OPTIONS,PATCH";
+        }
         List<String> methods = Arrays.asList(allowedMethods.split(","));
         for (String method : methods) {
             String trimmedMethod = method.trim();
@@ -77,7 +63,8 @@ public class CorsConfig {
         }
 
         // Parse allowed headers - CRITICAL: Must include Authorization for JWT
-        if ("*".equals(allowedHeaders)) {
+        String allowedHeaders = appProperties.getCors().getAllowedHeaders();
+        if ("*".equals(allowedHeaders) || allowedHeaders == null || allowedHeaders.isBlank()) {
             config.addAllowedHeader("*");
         } else {
             List<String> headers = Arrays.asList(allowedHeaders.split(","));
@@ -95,10 +82,11 @@ public class CorsConfig {
         config.addAllowedHeader("Accept");
 
         // Allow credentials (cookies, authorization headers) - needed for JWT
-        config.setAllowCredentials(allowCredentials);
+        config.setAllowCredentials(appProperties.getCors().isAllowCredentials());
 
         // Cache preflight responses - prevents repeated OPTIONS calls
-        config.setMaxAge(maxAge);
+        long maxAge = appProperties.getCors().getMaxAge();
+        config.setMaxAge(maxAge > 0 ? maxAge : 3600);
 
         // IMPORTANT: Allow Authorization header to be exposed in response
         config.addExposedHeader("Authorization");

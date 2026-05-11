@@ -31,6 +31,7 @@ public class BookEntity {
     @Size(min = 3, max = 50)
     private String bookName;
 
+    @Builder.Default
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "book_user_mapping", joinColumns = @JoinColumn(name = "book_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
     private Set<UserEntity> assignedUsers = new HashSet<>();

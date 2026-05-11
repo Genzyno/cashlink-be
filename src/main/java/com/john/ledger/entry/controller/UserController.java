@@ -138,7 +138,7 @@ public class UserController {
         }
     }
 
-    @Operation(summary = "Get paginated list of accepted/rejected invite notifications for the current user (invites they sent)")
+    @Operation(summary = "Get paginated list of accepted invite notifications for the current organization")
     @GetMapping("/accepted-invite-notifications")
     public ResponseEntity<ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>>> getAcceptedInviteNotifications(
             @RequestParam(defaultValue = "0") int page,
@@ -147,6 +147,36 @@ public class UserController {
         try {
             ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>> response =
                     userService.getAcceptedInviteNotifications(page, size, businessId);
+            return ResponseEntity.status(HttpStatus.valueOf(response.getStatusCode())).body(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @Operation(summary = "Get paginated list of rejected invite notifications for the current organization")
+    @GetMapping("/rejected-invite-notifications")
+    public ResponseEntity<ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>>> getRejectedInviteNotifications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) UUID businessId) {
+        try {
+            ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>> response =
+                    userService.getRejectedInviteNotifications(page, size, businessId);
+            return ResponseEntity.status(HttpStatus.valueOf(response.getStatusCode())).body(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @Operation(summary = "Get paginated list of pending invite notifications for the current organization")
+    @GetMapping("/pending-invite-notifications")
+    public ResponseEntity<ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>>> getPendingInviteNotifications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) UUID businessId) {
+        try {
+            ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>> response =
+                    userService.getPendingInviteNotifications(page, size, businessId);
             return ResponseEntity.status(HttpStatus.valueOf(response.getStatusCode())).body(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);

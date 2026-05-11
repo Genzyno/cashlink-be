@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
-import java.util.UUID;
-
 /**
  * One accepted (or rejected) invite notification for the inviter's bell/list.
  * The logged-in user sees invites they sent that were accepted or rejected.

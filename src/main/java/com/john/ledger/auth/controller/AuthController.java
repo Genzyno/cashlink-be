@@ -2,14 +2,18 @@ package com.john.ledger.auth.controller;
 
 import com.john.ledger.auth.dto.LedgerAuthTokenResponse;
 import com.john.ledger.auth.dto.AuthRefreshRequest;
+import com.john.ledger.auth.dto.AuthLoginRequest;
 import com.john.ledger.auth.dto.AuthSendOtpRequest;
 import com.john.ledger.auth.dto.AuthVerifyOtpRequest;
 import com.john.ledger.auth.dto.AuthForgotPasswordRequest;
+import com.john.ledger.auth.dto.AuthResetPasswordRequest;
 import com.john.ledger.auth.dto.AuthSendVerificationEmailRequest;
 import com.john.ledger.auth.dto.AuthGoogleIdTokenRequest;
 import com.john.ledger.auth.dto.AuthVerifyEmailRequest;
 import com.john.ledger.auth.dto.GoogleCallbackResult;
 import com.john.ledger.auth.dto.LedgerAuthUserInfo;
+import com.john.ledger.auth.dto.LoginResult;
+import com.john.ledger.auth.dto.SendOtpResult;
 import com.john.ledger.auth.dto.VerifyOtpResult;
 import com.john.ledger.auth.service.AuthService;
 import com.john.ledger.common.util.CurrentUserHolder;
@@ -32,6 +36,37 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    @Operation(summary = "Login with email and password")
+    @PostMapping("/login")
+    public ResponseEntity<ServiceResponse<LedgerAuthTokenResponse>> login(@RequestBody AuthLoginRequest request) {
+        if (request.getEmail() == null || request.getEmail().isBlank() || request.getPassword() == null || request.getPassword().isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ServiceResponse.failureResponse(400, "Email and password are required"));
+        }
+
+        LoginResult result = authService.loginWithPassword(
+                request.getEmail(),
+                request.getPassword(),
+                request.getChannel(),
+                request.getClientId());
+
+        if (result.getStatus() == LoginResult.Status.INVALID_CREDENTIALS) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ServiceResponse.failureResponse(401, "Invalid email or password"));
+        }
+        if (result.getStatus() == LoginResult.Status.USER_NOT_FOUND) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ServiceResponse.failureResponse(404, "Account not found. Please sign up first."));
+        }
+        if (result.getStatus() == LoginResult.Status.USER_INACTIVE) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ServiceResponse.failureResponse(403, "Account is inactive. Please contact support."));
+        }
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ServiceResponse.successResponse(200, "Login successful", result.getResponse()));
+    }
+
     @Operation(summary = "Send OTP to email")
     @PostMapping("/send-otp")
     public ResponseEntity<ServiceResponse<Void>> sendOtp(@RequestBody AuthSendOtpRequest request) {
@@ -44,12 +79,27 @@ public class AuthController {
                     .body(ServiceResponse.failureResponse(400, "Channel and clientId are required"));
         }
 
-        if (!authService.sendOtp(
+        SendOtpResult result = authService.sendOtp(
                 request.getEmail().toLowerCase().trim(),
                 request.getChannel(),
-                request.getClientId())) {
+                request.getClientId(),
+                request.getIntent());
+
+        if (result.getStatus() == SendOtpResult.Status.INVALID_EMAIL) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ServiceResponse.failureResponse(400, "Invalid email address or too many requests. Try again later."));
+                    .body(ServiceResponse.failureResponse(400, "Invalid email address."));
+        }
+        if (result.getStatus() == SendOtpResult.Status.RATE_LIMITED) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(ServiceResponse.failureResponse(429, "Too many requests. Try again later."));
+        }
+        if (result.getStatus() == SendOtpResult.Status.USER_NOT_FOUND) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ServiceResponse.failureResponse(404, "Account not found. Please sign up first."));
+        }
+        if (result.getStatus() == SendOtpResult.Status.USER_ALREADY_EXISTS) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ServiceResponse.failureResponse(409, "Account already exists. Please login."));
         }
 
         return ResponseEntity.status(HttpStatus.OK)
@@ -190,12 +240,32 @@ public class AuthController {
                     .body(ServiceResponse.failureResponse(400, "Email is required"));
         }
         String email = request.getEmail().toLowerCase().trim();
-        if (!authService.forgotPassword(email)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ServiceResponse.failureResponse(400, "Invalid email or too many requests. Try again later."));
+        int result = authService.forgotPassword(email);
+        if (result == 0) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ServiceResponse.failureResponse(404, "Account not found. Please sign up first."));
+        }
+        if (result == -1) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(ServiceResponse.failureResponse(429, "Too many requests. Please try again later."));
         }
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ServiceResponse.successResponse(200, "If an account exists, we've sent reset instructions to your email.", null));
+    }
+
+    @Operation(summary = "Reset password using token from reset link")
+    @PostMapping("/reset-password")
+    public ResponseEntity<ServiceResponse<Void>> resetPassword(@RequestBody AuthResetPasswordRequest request) {
+        if (request.getToken() == null || request.getToken().isBlank() || request.getNewPassword() == null || request.getNewPassword().isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ServiceResponse.failureResponse(400, "Token and new password are required"));
+        }
+        if (!authService.resetPassword(request.getToken(), request.getNewPassword())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ServiceResponse.failureResponse(400, "Invalid or expired reset token. Please request a new password reset."));
+        }
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ServiceResponse.successResponse(200, "Password reset successfully! You can now login with your new password.", null));
     }
 
     @Operation(summary = "Send email verification link")

@@ -41,6 +41,9 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
     @Query("SELECT u FROM UserEntity u LEFT JOIN u.roleEntity r WHERE u.id IN :ids")
     Page<UserEntity> findByIdIn(@Param("ids") List<UUID> ids, Pageable pageable);
 
+    @Query("SELECT u FROM UserEntity u LEFT JOIN u.roleEntity r WHERE u.adminId = :adminId")
+    Page<UserEntity> findByAdminId(@Param("adminId") UUID adminId, Pageable pageable);
+
     @Query("""
         SELECT u FROM UserEntity u LEFT JOIN u.roleEntity r
         WHERE u.id IN :ids AND (
@@ -51,4 +54,28 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
         )
         """)
     Page<UserEntity> findByIdInAndSearch(@Param("ids") List<UUID> ids, @Param("search") String search, Pageable pageable);
+
+    @Query("""
+        SELECT u FROM UserEntity u LEFT JOIN u.roleEntity r
+        WHERE u.adminId = :adminId AND (
+        LOWER(u.userName) LIKE LOWER(CONCAT('%', :search, '%'))
+        OR LOWER(u.userEmail) LIKE LOWER(CONCAT('%', :search, '%'))
+        OR u.userMobile LIKE CONCAT('%', :search, '%')
+        OR (r.roleName IS NOT NULL AND LOWER(r.roleName) LIKE LOWER(CONCAT('%', :search, '%')))
+        )
+        """)
+    Page<UserEntity> findByAdminIdAndSearch(@Param("adminId") UUID adminId, @Param("search") String search, Pageable pageable);
+    @Query("SELECT u FROM UserEntity u LEFT JOIN u.roleEntity r WHERE u.adminId = :adminId OR u.id = :adminId")
+    Page<UserEntity> findByAdminIdOrId(@Param("adminId") UUID adminId, Pageable pageable);
+
+    @Query("""
+        SELECT u FROM UserEntity u LEFT JOIN u.roleEntity r
+        WHERE (u.adminId = :adminId OR u.id = :adminId) AND (
+        LOWER(u.userName) LIKE LOWER(CONCAT('%', :search, '%'))
+        OR LOWER(u.userEmail) LIKE LOWER(CONCAT('%', :search, '%'))
+        OR u.userMobile LIKE CONCAT('%', :search, '%')
+        OR (r.roleName IS NOT NULL AND LOWER(r.roleName) LIKE LOWER(CONCAT('%', :search, '%')))
+        )
+        """)
+    Page<UserEntity> findByAdminIdOrIdAndSearch(@Param("adminId") UUID adminId, @Param("search") String search, Pageable pageable);
 }

@@ -98,20 +98,22 @@ public class InviteEmailService {
 
     private String buildInviteEmailHtml(String email, String roleName, List<String> bookAndBusinessLines, String acceptLink, String rejectLink, String invitedByName) {
         String roleLine = (roleName != null && !roleName.isBlank())
-                ? "<p><strong>Role:</strong> " + escapeHtml(roleName) + "</p>"
-                : "<p><strong>Role:</strong> To be assigned</p>";
+                ? "<div style='margin-bottom: 8px;'><span style='color: #71717a; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;'>Role</span><br/><strong style='color: #18181b; font-size: 15px;'>" + escapeHtml(roleName) + "</strong></div>"
+                : "";
         String booksSection = "";
         if (bookAndBusinessLines != null && !bookAndBusinessLines.isEmpty()) {
-            StringBuilder sb = new StringBuilder("<p><strong>Books you will have access to:</strong></p><ul>");
+            StringBuilder sb = new StringBuilder("<div style='margin-top: 16px; padding-top: 16px; border-top: 1px solid #e4e4e7;'><span style='color: #71717a; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;'>Books you will access</span><ul style='margin: 8px 0 0 0; padding-left: 20px; color: #3f3f46; font-size: 14px;'>");
             for (String line : bookAndBusinessLines) {
-                sb.append("<li>").append(escapeHtml(line)).append("</li>");
+                sb.append("<li style='margin-bottom: 4px;'>").append(escapeHtml(line)).append("</li>");
             }
-            sb.append("</ul>");
+            sb.append("</ul></div>");
             booksSection = sb.toString();
         }
         String invitedByLine = (invitedByName != null && !invitedByName.isBlank())
-                ? "<p><strong>Invited by:</strong> " + escapeHtml(invitedByName) + "</p>"
+                ? "<div style='margin-bottom: 8px;'><span style='color: #71717a; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;'>Invited by</span><br/><strong style='color: #18181b; font-size: 15px;'>" + escapeHtml(invitedByName) + "</strong></div>"
                 : "";
+        String emailLine = "<div style='margin-bottom: 8px;'><span style='color: #71717a; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;'>Your Email</span><br/><strong style='color: #18181b; font-size: 15px;'>" + escapeHtml(email) + "</strong></div>";
+
         return """
             <!DOCTYPE html>
             <html>
@@ -119,49 +121,61 @@ public class InviteEmailService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <style>
-                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; background: #f4f4f5; color: #18181b; font-size: 15px; line-height: 1.6; }
-                    .card { max-width: 480px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e4e4e7; }
-                    .header { background: #18181b; color: #fff; padding: 24px; text-align: center; }
-                    .header h1 { margin: 0; font-size: 18px; font-weight: 600; }
-                    .body { padding: 32px 24px; }
-                    .body p { margin: 0 0 12px 0; color: #52525b; }
-                    .detail-box { background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; padding: 16px; margin: 20px 0; }
-                    .detail-box ul { margin: 8px 0 0 0; padding-left: 20px; }
-                    .btn { display: inline-block; color: #fff !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 8px 8px 0 0; }
-                    .btn-accept { background: #18181b; }
-                    .btn-accept:hover { background: #3f3f46; }
-                    .btn-reject { background: #71717a; }
-                    .btn-reject:hover { background: #52525b; }
-                    .footer { background: #fafafa; padding: 16px 24px; text-align: center; color: #71717a; font-size: 12px; border-top: 1px solid #e4e4e7; }
-                    .note { background: #fefce8; border: 1px solid #fef08a; border-radius: 6px; padding: 12px; margin-top: 20px; color: #854d0e; font-size: 13px; }
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+                    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; color: #1e293b; }
+                    .wrapper { padding: 40px 20px; }
+                    .container { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0; }
+                    .header { background: linear-gradient(135deg, #0f172a 0%%, #1e293b 100%%); padding: 40px 32px; text-align: center; }
+                    .header h1 { margin: 0; color: #f8fafc; font-size: 24px; font-weight: 700; letter-spacing: -0.025em; }
+                    .header p { margin: 8px 0 0 0; color: #94a3b8; font-size: 14px; }
+                    .content { padding: 32px; }
+                    .intro { font-size: 16px; color: #475569; margin-bottom: 24px; }
+                    .details-card { background: #f1f5f9; border-radius: 12px; padding: 24px; margin-bottom: 32px; }
+                    .actions { display: flex; flex-direction: column; gap: 12px; }
+                    .btn { display: block; text-align: center; padding: 14px 24px; border-radius: 8px; font-weight: 600; font-size: 15px; text-decoration: none; transition: all 0.2s; }
+                    .btn-primary { background-color: #0f172a; color: #ffffff !important; margin-bottom: 12px; }
+                    .btn-secondary { background-color: #ffffff; color: #475569 !important; border: 1px solid #e2e8f0; }
+                    .footer { padding: 24px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; color: #64748b; font-size: 13px; }
+                    .expiration { margin-top: 24px; font-size: 13px; color: #94a3b8; line-height: 1.5; }
                 </style>
             </head>
             <body>
-                <div class="card">
-                    <div class="header">
-                        <h1>My Ledger – Team Invitation</h1>
-                    </div>
-                    <div class="body">
-                        <p>You have been invited to join <strong>My Ledger</strong>.</p>
-                        <div class="detail-box">
-                            <p><strong>Email:</strong> %s</p>
-                            %s
-                            %s
-                            %s
+                <div class="wrapper">
+                    <div class="container">
+                        <div class="header">
+                            <h1>My Ledger</h1>
+                            <p>Premium Team Collaboration</p>
                         </div>
-                        <p>Choose an option below:</p>
-                        <a href="%s" class="btn btn-accept">Accept invitation</a>
-                        <a href="%s" class="btn btn-reject">Reject invitation</a>
-                        <div class="note">This link expires in 7 days. Accept to create your account (you will set your password). Reject to decline; the admin can send a new invite later if needed.</div>
-                    </div>
-                    <div class="footer">
-                        This is an automated message from My Ledger.
+                        <div class="content">
+                            <p class="intro">Hello,</p>
+                            <p class="intro">You've been invited to collaborate on <strong>My Ledger</strong>. Join your team to start managing your books efficiently.</p>
+                            
+                            <div class="details-card">
+                                %s
+                                %s
+                                %s
+                                %s
+                            </div>
+                            
+                            <div class="actions">
+                                <a href="%s" class="btn btn-primary">Accept Invitation</a>
+                                <a href="%s" class="btn btn-secondary">Decline</a>
+                            </div>
+                            
+                            <div class="expiration">
+                                <strong>Note:</strong> This invitation expires in 7 days. Once accepted, you'll be prompted to set up your secure password.
+                            </div>
+                        </div>
+                        <div class="footer">
+                            &copy; 2026 My Ledger. All rights reserved.<br/>
+                            <span style="font-size: 11px;">This is an automated security notification.</span>
+                        </div>
                     </div>
                 </div>
             </body>
             </html>
             """
-                .formatted(escapeHtml(email), invitedByLine, roleLine, booksSection, escapeHtml(acceptLink), escapeHtml(rejectLink));
+                .formatted(emailLine, invitedByLine, roleLine, booksSection, escapeHtml(acceptLink), escapeHtml(rejectLink));
     }
 
     private static String escapeHtml(String s) {

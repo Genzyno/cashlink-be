@@ -7,7 +7,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
-import org.springframework.beans.factory.annotation.Value;
+import com.john.ledger.config.AppProperties;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -20,7 +20,6 @@ public class JwtService {
     private static final String TYPE_ACCESS = "access";
     private static final String TYPE_REFRESH = "refresh";
     private static final String CLAIM_TYPE = "type";
-    private static final String CLAIM_USER_ID = "userId";
     private static final String CLAIM_EMAIL = "email";
     private static final String CLAIM_NAME = "name";
 
@@ -28,13 +27,16 @@ public class JwtService {
     private final long accessExpirationSec;
     private final long refreshExpirationSec;
 
-    public JwtService(
-            @Value("${app.jwt.secret:your-256-bit-secret-change-in-production-make-it-long-enough}") String secret,
-            @Value("${app.jwt.access-expiration-sec:3600}") long accessExpirationSec,
-            @Value("${app.jwt.refresh-expiration-sec:604800}") long refreshExpirationSec) {
+    public JwtService(AppProperties appProperties) {
+        String secret = appProperties.getJwt().getSecret();
+        if (secret == null || secret.isBlank()) {
+            secret = "your-256-bit-secret-change-in-production-make-it-long-enough";
+        }
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.accessExpirationSec = accessExpirationSec;
-        this.refreshExpirationSec = refreshExpirationSec;
+        this.accessExpirationSec = appProperties.getJwt().getAccessExpirationSec() > 0 
+                ? appProperties.getJwt().getAccessExpirationSec() : 3600;
+        this.refreshExpirationSec = appProperties.getJwt().getRefreshExpirationSec() > 0 
+                ? appProperties.getJwt().getRefreshExpirationSec() : 604800;
     }
 
     public String createAccessToken(String userId, String email, String name) {

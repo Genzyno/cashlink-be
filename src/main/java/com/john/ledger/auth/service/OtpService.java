@@ -1,9 +1,9 @@
 package com.john.ledger.auth.service;
 
+import com.john.ledger.config.AppProperties;
 import com.john.ledger.auth.entity.OtpEntity;
 import com.john.ledger.auth.repository.OtpRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,13 +23,10 @@ public class OtpService {
     @Autowired
     private OtpRepository otpRepository;
 
-    public OtpService(
-            @Value("${app.otp.length:6}") int otpLength,
-            @Value("${app.otp.expiration-min:5}") int expirationMinutes,
-            @Value("${app.otp.rate-limit-per-email-per-min:2}") int rateLimitPerEmailPerMin) {
-        this.otpLength = otpLength;
-        this.expirationMinutes = expirationMinutes;
-        this.rateLimitPerEmailPerMin = rateLimitPerEmailPerMin;
+    public OtpService(AppProperties appProperties) {
+        this.otpLength = appProperties.getOtp().getLength() > 0 ? appProperties.getOtp().getLength() : 6;
+        this.expirationMinutes = appProperties.getOtp().getExpirationMin() > 0 ? appProperties.getOtp().getExpirationMin() : 5;
+        this.rateLimitPerEmailPerMin = appProperties.getOtp().getRateLimitPerEmailPerMin() > 0 ? appProperties.getOtp().getRateLimitPerEmailPerMin() : 2;
     }
 
     @Transactional

@@ -37,7 +37,15 @@ public interface IUserService {
     /** Reject invitation: clear invite for this email so admin can send invite again. */
     ServiceResponse<Void> rejectInvite(RejectInviteRequest request);
 
-    /** Get paginated list of accepted/rejected invite notifications for the current user (invites they sent). */
+    /** Get paginated list of accepted invite notifications for the current organization. */
     ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>> getAcceptedInviteNotifications(
+            int page, int size, UUID businessId);
+
+    /** Get paginated list of rejected invite notifications for the current organization. */
+    ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>> getRejectedInviteNotifications(
+            int page, int size, UUID businessId);
+
+    /** Get paginated list of pending invite notifications for the current organization. */
+    ServiceResponse<PaginatedResponse<AcceptedInviteNotificationResponse>> getPendingInviteNotifications(
             int page, int size, UUID businessId);
 }

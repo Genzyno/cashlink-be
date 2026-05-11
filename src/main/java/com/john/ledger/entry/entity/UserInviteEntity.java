@@ -52,6 +52,9 @@ public class UserInviteEntity {
     @Column(name = "invited_by_user_id")
     private UUID invitedByUserId;
 
+    @Column(name = "admin_id")
+    private UUID adminId;
+
     @CreationTimestamp
     @Column(name = "created_time", updatable = false)
     private LocalDateTime createdTime;

@@ -39,6 +39,10 @@ public class UserEntity {
     @JoinColumn(name = "role_id")
     private RoleEntity roleEntity;
 
+    @Column(name = "admin_id")
+    private UUID adminId;
+
+    @Builder.Default
     @Column(nullable = false)
     private Boolean status = true;
 

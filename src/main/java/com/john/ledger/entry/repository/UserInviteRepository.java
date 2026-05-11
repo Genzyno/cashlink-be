@@ -35,4 +35,19 @@ public interface UserInviteRepository extends JpaRepository<UserInviteEntity, UU
             @Param("statuses") List<UserInviteEntity.InviteStatus> statuses,
             @Param("businessId") UUID businessId,
             Pageable pageable);
+
+    /** Accepted/rejected/pending invites associated with the given admin organization. */
+    @Query("""
+        SELECT i FROM UserInviteEntity i
+        WHERE i.adminId = :adminId AND i.status IN :statuses
+        AND (:businessId IS NULL OR i.id IN (
+            SELECT ub.inviteId FROM UserInviteBookEntity ub, BookEntity b
+            WHERE ub.bookId = b.id AND b.businessId = :businessId
+        ))
+        """)
+    Page<UserInviteEntity> findByAdminIdAndStatusInAndOptionalBusiness(
+            @Param("adminId") UUID adminId,
+            @Param("statuses") List<UserInviteEntity.InviteStatus> statuses,
+            @Param("businessId") UUID businessId,
+            Pageable pageable);
 }

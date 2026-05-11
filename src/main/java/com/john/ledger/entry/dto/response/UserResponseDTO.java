@@ -13,4 +13,5 @@ public class UserResponseDTO {
     private UUID roleId;
     private String roleName;
     private Boolean status;
+    private UUID adminId;
 }

@@ -1,6 +1,6 @@
-# Business Type API – Endpoints and Payloads
+﻿# Business Type API â€“ Endpoints and Payloads
 
-Base path: `{apiUrl}/business` (e.g. `http://localhost:8080/myledger-api/business`).
+Base path: `{apiUrl}/business` (e.g. `http://localhost:8080/cashlink-api/business`).
 
 The frontend uses these endpoints for the **Business Type** dropdown in the Business module (Add/Edit Business drawer): **Get all**, **Save**, **Update**, and **Delete**. Use the same request headers as other APIs (`Authorization: Bearer <token>`, `X-Logged-User-Id`).
 

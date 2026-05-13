@@ -1,4 +1,4 @@
-# Get Android debug SHA-1 for Google Sign-In / Firebase
+﻿# Get Android debug SHA-1 for Google Sign-In / Firebase
 # Usage (from your FLUTTER project root, not my-ledger-be):
 #   powershell -File "<path-to-my-ledger-be>\scripts\get-debug-sha1.ps1" -FlutterRoot "D:\path\to\my_ledger_app"
 # Or copy this file to your Flutter project as android\get-debug-sha1.ps1 and run:
@@ -53,7 +53,7 @@ Write-Host "=== WHAT TO COPY ===" -ForegroundColor Green
 Write-Host "1. Find the block: Variant: debug"
 Write-Host "2. Copy the line: SHA1: xx:xx:xx:..."
 Write-Host "3. Google Cloud Console -> APIs & Services -> Credentials -> Create OAuth client ID -> Android"
-Write-Host "   Package name: com.myledger.my_ledger_app"
+Write-Host "   Package name: com.cashlink.my_ledger_app"
 Write-Host "   SHA-1: (paste)"
 Write-Host "4. If you use Firebase: Project settings -> Your Android app -> Add fingerprint -> same SHA-1"
 Write-Host "5. Download fresh google-services.json if you use Firebase"

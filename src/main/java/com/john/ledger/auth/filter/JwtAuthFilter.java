@@ -1,4 +1,4 @@
-package com.john.ledger.auth.filter;
+﻿package com.john.ledger.auth.filter;
 
 import com.john.ledger.auth.service.JwtService;
 import com.john.ledger.common.util.CurrentUserHolder;
@@ -107,9 +107,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private boolean isPublicUrl(String path) {
         if (path == null) return false;
-        return path.startsWith("/myledger-api/auth/")
+        return path.startsWith("/cashlink-api/auth/")
                 || path.startsWith("/auth/")
-                || path.startsWith("/myledger-api/public/")
+                || path.startsWith("/cashlink-api/public/")
                 || path.startsWith("/public/")
                 || path.contains("/send-otp")
                 || path.contains("/verify-otp")
@@ -117,7 +117,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 || path.contains("/verify-email")
                 || path.contains("/send-verification-email")
                 || path.startsWith("/actuator")
-                || path.startsWith("/myledger-api/actuator")
+                || path.startsWith("/cashlink-api/actuator")
                 || path.contains("/swagger")
                 || path.contains("/v3/api-docs")
                 || path.contains("/google")

@@ -1,4 +1,4 @@
-# Patches android/app/google-services.json oauth_client list with your Android OAuth client + SHA-1.
+﻿# Patches android/app/google-services.json oauth_client list with your Android OAuth client + SHA-1.
 # Prerequisite: You already added Android OAuth client in Google Cloud and downloaded google-services.json from Firebase once.
 #
 # Usage (from Flutter project root):
@@ -11,7 +11,7 @@ param(
     [string]$AndroidClientId,
     [Parameter(Mandatory = $true)]
     [string]$Sha1,
-    [string]$PackageName = "com.myledger.my_ledger_app",
+    [string]$PackageName = "com.cashlink.my_ledger_app",
     [string]$WebClientId = "",
     [string]$GoogleServicesPath = ""
 )

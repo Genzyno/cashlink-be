@@ -1,4 +1,4 @@
-# Run from Flutter project root:  powershell -File android/get-debug-sha1.ps1
+﻿# Run from Flutter project root:  powershell -File android/get-debug-sha1.ps1
 # Or from android folder:          powershell -File get-debug-sha1.ps1
 
 $ErrorActionPreference = "Stop"
@@ -21,7 +21,7 @@ Write-Host ""
 Write-Host "=== Next steps ===" -ForegroundColor Green
 Write-Host "1. Under 'Variant: debug', copy SHA1: xx:xx:xx:..."
 Write-Host "2. Google Cloud -> APIs & Services -> Credentials -> Create OAuth client ID -> Android"
-Write-Host "   Package: com.myledger.my_ledger_app"
+Write-Host "   Package: com.cashlink.my_ledger_app"
 Write-Host "3. Copy the Android OAuth Client ID (ends with .apps.googleusercontent.com)"
 Write-Host "4. Run: powershell -File android/generate-google-services.ps1 -AndroidClientId \"YOUR_ANDROID_CLIENT_ID\""
 Write-Host ""

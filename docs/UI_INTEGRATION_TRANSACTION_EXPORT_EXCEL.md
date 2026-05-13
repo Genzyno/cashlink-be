@@ -1,8 +1,8 @@
-# Transaction Export Excel – Endpoint and Payload
+﻿# Transaction Export Excel â€“ Endpoint and Payload
 
 Used when the user clicks **Export Excel** on the Transactions page, opens the export drawer (with the same **multiselect** filter fields as the main filter), and clicks **Export**.
 
-**Base URL:** `{apiBaseUrl}` (e.g. `http://localhost:8080/myledger-api`)  
+**Base URL:** `{apiBaseUrl}` (e.g. `http://localhost:8080/cashlink-api`)  
 **Auth:** `Authorization: Bearer <accessToken>`
 
 ---
@@ -60,7 +60,7 @@ The backend returns the Excel file directly with:
 - **Content-Type:** `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
 - **Content-Disposition:** `attachment; filename="transactions_export.xlsx"`
 
-The response body is the binary Excel file. The frontend treats the response as a blob, creates a download link, triggers download with the filename from `Content-Disposition` (or default `transactions_export.xlsx`), and shows a success message (e.g. “Export ready”).
+The response body is the binary Excel file. The frontend treats the response as a blob, creates a download link, triggers download with the filename from `Content-Disposition` (or default `transactions_export.xlsx`), and shows a success message (e.g. â€œExport readyâ€).
 
 **Error (4xx / 5xx):**
 
@@ -74,7 +74,7 @@ JSON body with `statusCode`, `message` (and optionally `data: null`). Example:
 }
 ```
 
-The UI shows that message or a generic “Export failed”.
+The UI shows that message or a generic â€œExport failedâ€.
 
 ---
 

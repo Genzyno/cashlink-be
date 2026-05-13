@@ -249,8 +249,8 @@ public class TransactionService implements ITransactionService {
             }
             ServiceResponse<?> accessDenied = checkBookAccessForAssignedScope(bookId);
             if (accessDenied != null) return ServiceResponse.failureResponse(accessDenied.getStatusCode(), accessDenied.getMessage());
-            // Sort: newest first by date, then time, then createdTime (milliseconds), then id
-            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("createdTime"), Sort.Order.desc("id"));
+            // Sort: newest first by updatedTime, then date, then time, then id
+            Sort sort = Sort.by(Sort.Order.desc("updatedTime"), Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("id"));
             PageRequest pageRequest = PageRequest.of(page, size, sort);
 
             Page<TransactionEntity> transactionPage = transactionRepository.findAllByBookId(bookId, pageRequest);
@@ -314,8 +314,8 @@ public class TransactionService implements ITransactionService {
             }
             ServiceResponse<?> accessDenied = checkBookAccessForAssignedScope(bookId);
             if (accessDenied != null) return ServiceResponse.failureResponse(accessDenied.getStatusCode(), accessDenied.getMessage());
-            // Sort: newest first by date, then time, then createdTime (milliseconds), then id
-            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("createdTime"), Sort.Order.desc("id"));
+            // Sort: newest first by updatedTime, then date, then time, then id
+            Sort sort = Sort.by(Sort.Order.desc("updatedTime"), Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("id"));
             PageRequest pageRequest = PageRequest.of(page, size, sort);
 
             Page<TransactionEntity> transactionPage;
@@ -398,7 +398,7 @@ public class TransactionService implements ITransactionService {
             }
             ServiceResponse<?> accessDenied = checkBookAccessForAssignedScope(bookId);
             if (accessDenied != null) return ServiceResponse.failureResponse(accessDenied.getStatusCode(), accessDenied.getMessage());
-            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("createdTime"), Sort.Order.desc("id"));
+            Sort sort = Sort.by(Sort.Order.desc("updatedTime"), Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("id"));
             PageRequest pageRequest = PageRequest.of(page, size, sort);
 
             Specification<TransactionEntity> spec = TransactionFilterSpecification.filterBy(
@@ -607,7 +607,11 @@ public class TransactionService implements ITransactionService {
             }
             ServiceResponse<?> accessDenied = checkBookAccessForAssignedScope(bookId);
             if (accessDenied != null) return ServiceResponse.failureResponse(accessDenied.getStatusCode(), accessDenied.getMessage());
-            List<TransactionEntity> chronological = transactionRepository.findAllByBookIdOrderByDateAscTimeAscCreatedTimeAscIdAsc(bookId);
+            List<TransactionEntity> descending = transactionRepository.findAllByBookIdOrderByDateDescTimeDescCreatedTimeDescIdDesc(bookId);
+            
+            // Reverse to chronological order to calculate running balance correctly
+            List<TransactionEntity> chronological = new java.util.ArrayList<>(descending);
+            java.util.Collections.reverse(chronological);
 
             BigDecimal runningBalance = BigDecimal.ZERO;
             List<TransactionResponse> withRunning = new ArrayList<>();
@@ -639,8 +643,6 @@ public class TransactionService implements ITransactionService {
             }
 
             TransactionSummaryResponse summary = getSummaryForBook(bookId);
-            // Reverse to show latest at top
-            Collections.reverse(withRunning);
 
             TransactionDashboardResponse dashboard = TransactionDashboardResponse.builder()
                     .summary(summary)

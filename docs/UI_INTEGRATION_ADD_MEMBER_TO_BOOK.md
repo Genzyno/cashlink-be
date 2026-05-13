@@ -1,8 +1,8 @@
-# Add Member to this book – Endpoints & Payload
+﻿# Add Member to this book â€“ Endpoints & Payload
 
 Used by the **Add Member to this book** drawer on the Transactions page (per-book members + invite).
 
-Base URL: **`{apiBaseUrl}`** (e.g. `http://localhost:8080/myledger-api`).
+Base URL: **`{apiBaseUrl}`** (e.g. `http://localhost:8080/cashlink-api`).
 
 ---
 
@@ -76,7 +76,7 @@ Base URL: **`{apiBaseUrl}`** (e.g. `http://localhost:8080/myledger-api`).
 | `assignedUserIds` | string[] (UUIDs) | Full list of user IDs that should have access to this book |
 | `businessId` | string (UUID) | Current business context |
 
-**Success:** `200` – show success message, keep drawer open with updated selection.  
+**Success:** `200` â€“ show success message, keep drawer open with updated selection.  
 **Error:** Show `response.body.message` or generic "Failed to update members".
 
 ---
@@ -110,7 +110,7 @@ Base URL: **`{apiBaseUrl}`** (e.g. `http://localhost:8080/myledger-api`).
 | `businessId` | string (UUID) | Current business (from header) |
 | `allBooks` | boolean | Not used in "Add Member to this book"; omit or `false` |
 
-**Success:** `200` / `201` – show success, close invite drawer, reload users in members drawer.  
+**Success:** `200` / `201` â€“ show success, close invite drawer, reload users in members drawer.  
 **Error:** Show `response.body.message` or "Failed to send invites".
 
 ---
@@ -119,8 +119,8 @@ Base URL: **`{apiBaseUrl}`** (e.g. `http://localhost:8080/myledger-api`).
 
 | Action | Method | Endpoint | Payload |
 |--------|--------|----------|---------|
-| Load users for list | GET | `users/get-all-user?page=0&size=500` | — |
-| Load books (get current book) | GET | `book/get-all-book?businessId=...&page=0&size=500` | — |
+| Load users for list | GET | `users/get-all-user?page=0&size=500` | â€” |
+| Load books (get current book) | GET | `book/get-all-book?businessId=...&page=0&size=500` | â€” |
 | Save members | PUT | `book/update-book/{bookId}` | `BookUpdateRequest` |
 | Invite new users to book | POST | `users/send-invite` | `UserInviteRequest` (with `bookIds: [bookId]`) |
 

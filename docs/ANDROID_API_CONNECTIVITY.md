@@ -1,4 +1,4 @@
-# “Cannot reach the server” on Android (Cash Link)
+﻿# â€œCannot reach the serverâ€ on Android (Cash Link)
 
 The app shows this when **HTTP requests fail** (wrong URL, backend off, firewall, or wrong network).
 
@@ -12,34 +12,34 @@ From the `my-ledger-be` folder:
 mvn spring-boot:run
 ```
 
-Wait until you see: `Started MyLedgerBeApplication`.
+Wait until you see: `Started CashLinkBeApplication`.
 
 ---
 
 ## 2. Set the correct **base URL** in the Flutter app
 
-**Do not use `localhost` or `127.0.0.1` on a real phone** — that refers to the phone itself, not your PC.
+**Do not use `localhost` or `127.0.0.1` on a real phone** â€” that refers to the phone itself, not your PC.
 
 | Where you run the app | Base URL example |
 |------------------------|------------------|
-| **Android Emulator** (same PC as backend) | `http://10.0.2.2:8080/myledger-api/` |
-| **Physical phone** (USB / Wi‑Fi, same network as PC) | `http://192.168.x.x:8080/myledger-api/` |
+| **Android Emulator** (same PC as backend) | `http://10.0.2.2:8080/cashlink-api/` |
+| **Physical phone** (USB / Wiâ€‘Fi, same network as PC) | `http://192.168.x.x:8080/cashlink-api/` |
 
-Replace `192.168.x.x` with your PC’s IPv4 **(Wi‑Fi)** address:
+Replace `192.168.x.x` with your PCâ€™s IPv4 **(Wiâ€‘Fi)** address:
 
 ```powershell
 ipconfig
 ```
 
-Look for **Wireless LAN adapter Wi‑Fi** → **IPv4 Address**.
+Look for **Wireless LAN adapter Wiâ€‘Fi** â†’ **IPv4 Address**.
 
 ---
 
 ## 3. Quick test before using the app
 
-On the **phone** browser (same Wi‑Fi), open:
+On the **phone** browser (same Wiâ€‘Fi), open:
 
-`http://192.168.x.x:8080/myledger-api/public/ping`
+`http://192.168.x.x:8080/cashlink-api/public/ping`
 
 You should see JSON like:
 
@@ -72,12 +72,12 @@ Your backend already allows all origins for browsers.
 |-------|
 | Backend running on PC (port 8080) |
 | App uses `10.0.2.2` (emulator) or PC **LAN IP** (real device), not `localhost` |
-| Phone and PC on same Wi‑Fi (for physical device) |
-| `/myledger-api/public/ping` works in phone browser |
+| Phone and PC on same Wiâ€‘Fi (for physical device) |
+| `/cashlink-api/public/ping` works in phone browser |
 | Firewall allows port 8080 |
 
 ---
 
 ## 7. Production
 
-Use HTTPS and your real API host, e.g. `https://api.yourdomain.com/myledger-api/`.
+Use HTTPS and your real API host, e.g. `https://api.yourdomain.com/cashlink-api/`.

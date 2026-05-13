@@ -1,11 +1,11 @@
-version: '3.8'
+﻿version: '3.8'
 
 services:
-  myledger-api:
+  cashlink-api:
     build: .
-    container_name: myledger-api
+    container_name: cashlink-api
     restart: unless-stopped
     ports:
       - "8080:8080"
     env_file:
-      - /home/ubuntu/config/myledger.env
+      - /home/ubuntu/config/cashlink.env

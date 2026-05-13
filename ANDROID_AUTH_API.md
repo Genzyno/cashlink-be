@@ -1,12 +1,12 @@
-# My Ledger – Android Auth API Integration
+﻿# My Ledger â€“ Android Auth API Integration
 
 Base URL for all endpoints (use your server host in production):
 
 ```
-https://<your-server>/myledger-api/
+https://<your-server>/cashlink-api/
 ```
 
-Example: `https://api.myledger.com/myledger-api/`
+Example: `https://api.cashlink.com/cashlink-api/`
 test
 ---
 
@@ -43,7 +43,7 @@ test
 }
 ```
 
-**Error:** `400` – Email required, or channel/clientId missing, or invalid email / rate limited.
+**Error:** `400` â€“ Email required, or channel/clientId missing, or invalid email / rate limited.
 
 ---
 
@@ -62,8 +62,8 @@ test
 | clientId | string | Yes      | Same clientId used in send-otp.                                             |
 | intent   | string | No       | `"login"` (default) or `"register"`. See below.                             |
 
-- **`intent = "login"` or omit:** User must already exist. If email is not registered → `403 User not registered`.
-- **`intent = "register"`:** If email is new, user is created (Super Admin) and tokens returned. If already registered → `409 User already registered. Please login.`
+- **`intent = "login"` or omit:** User must already exist. If email is not registered â†’ `403 User not registered`.
+- **`intent = "register"`:** If email is new, user is created (Super Admin) and tokens returned. If already registered â†’ `409 User already registered. Please login.`
 
 **Example (login):**
 
@@ -110,11 +110,11 @@ test
 
 ---
 
-## 2b. Google Sign-In (Android / Flutter) — ID token
+## 2b. Google Sign-In (Android / Flutter) â€” ID token
 
 Use this instead of the browser redirect flow (`GET /auth/google`).
 
-**Prerequisites:** Register **debug SHA-1** and an **Android OAuth client** in Google Cloud (package `com.myledger.my_ledger_app`). Use the **Web** client ID in `requestIdToken()`. See **`docs/GOOGLE_ANDROID_SIGNIN.md`**.
+**Prerequisites:** Register **debug SHA-1** and an **Android OAuth client** in Google Cloud (package `com.cashlink.my_ledger_app`). Use the **Web** client ID in `requestIdToken()`. See **`docs/GOOGLE_ANDROID_SIGNIN.md`**.
 
 **Endpoint:** `POST {baseUrl}auth/google/id-token`  
 **Auth:** None
@@ -133,9 +133,9 @@ Use this instead of the browser redirect flow (`GET /auth/google`).
 }
 ```
 
-**Success:** `200` — same `data` shape as verify-otp (`accessToken`, `refreshToken`, `user`, …).
+**Success:** `200` â€” same `data` shape as verify-otp (`accessToken`, `refreshToken`, `user`, â€¦).
 
-**Error:** `401` — Invalid token or wrong audience; fix SHA-1 / client ID per **`docs/GOOGLE_ANDROID_SIGNIN.md`**.
+**Error:** `401` â€” Invalid token or wrong audience; fix SHA-1 / client ID per **`docs/GOOGLE_ANDROID_SIGNIN.md`**.
 
 ---
 
@@ -158,18 +158,18 @@ Use this instead of the browser redirect flow (`GET /auth/google`).
 }
 ```
 
-**Success response:** `200` – Same shape as verify-otp success (new `accessToken`, `refreshToken`, `expiresIn`, `user`).
+**Success response:** `200` â€“ Same shape as verify-otp success (new `accessToken`, `refreshToken`, `expiresIn`, `user`).
 
-**Error:** `401` – Refresh token missing or expired.
+**Error:** `401` â€“ Refresh token missing or expired.
 
 ---
 
 ## 4. Get current user (me)
 
 **Endpoint:** `GET {baseUrl}auth/me`  
-**Auth:** Required – `Authorization: Bearer <accessToken>`
+**Auth:** Required â€“ `Authorization: Bearer <accessToken>`
 
-**Optional header:** `X-Logged-User-Id: <user-uuid>` – If sent, must match the user in the JWT.
+**Optional header:** `X-Logged-User-Id: <user-uuid>` â€“ If sent, must match the user in the JWT.
 
 **Success response:** `200`
 
@@ -188,14 +188,14 @@ Use this instead of the browser redirect flow (`GET /auth/google`).
 }
 ```
 
-**Error:** `401` – Missing or invalid token.
+**Error:** `401` â€“ Missing or invalid token.
 
 ---
 
 ## 5. Logout
 
 **Endpoint:** `POST {baseUrl}auth/logout`  
-**Auth:** Optional but recommended – `Authorization: Bearer <accessToken>`
+**Auth:** Optional but recommended â€“ `Authorization: Bearer <accessToken>`
 
 **Request body:** None (or empty `{}`).
 
@@ -232,7 +232,7 @@ Use this instead of the browser redirect flow (`GET /auth/google`).
 }
 ```
 
-**Success response:** `200` – Message says reset instructions sent if account exists (backend does not reveal whether email exists).
+**Success response:** `200` â€“ Message says reset instructions sent if account exists (backend does not reveal whether email exists).
 
 ```json
 {
@@ -242,7 +242,7 @@ Use this instead of the browser redirect flow (`GET /auth/google`).
 }
 ```
 
-**Error:** `400` – Email missing or rate limited.
+**Error:** `400` â€“ Email missing or rate limited.
 
 ---
 
@@ -253,7 +253,7 @@ Use this instead of the browser redirect flow (`GET /auth/google`).
 
 **Request body (JSON):** `{ "email": "user@example.com" }`
 
-**Success:** `200` – Verification email sent.
+**Success:** `200` â€“ Verification email sent.
 
 ---
 
@@ -264,7 +264,7 @@ Use this instead of the browser redirect flow (`GET /auth/google`).
 
 **Request body (JSON):** `{ "token": "<token-from-verification-link>" }`
 
-**Success:** `200` – Email verified.
+**Success:** `200` â€“ Email verified.
 
 ---
 
@@ -317,8 +317,8 @@ The server will validate that this matches the user in the JWT.
 | Verify OTP       | POST   | auth/verify-otp             | No     | email, otp, clientId, intent (login/register) |
 | Google (Android) | POST   | auth/google/id-token        | No     | idToken                                    |
 | Refresh token    | POST   | auth/refresh                | No     | refreshToken                               |
-| Get current user | GET    | auth/me                     | Bearer | —                                          |
-| Logout           | POST   | auth/logout                 | Optional Bearer | —                                  |
+| Get current user | GET    | auth/me                     | Bearer | â€”                                          |
+| Logout           | POST   | auth/logout                 | Optional Bearer | â€”                                  |
 | Forgot password  | POST   | auth/forgot-password        | No     | email                                      |
 | Send verify email| POST   | auth/send-verification-email | No   | email                                      |
 | Verify email     | POST   | auth/verify-email           | No     | token                                      |

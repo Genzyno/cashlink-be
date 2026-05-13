@@ -40,7 +40,7 @@ public class OtpEmailService {
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
             helper.setFrom(mailUsername);
             helper.setTo(email);
-            helper.setSubject("Your Verification Code - My Ledger");
+            helper.setSubject("Your Verification Code - CashLink");
             helper.setText(buildOtpEmailHtml(otp), true);
 
             sendWithRetry(mimeMessage, email, otp);
@@ -120,7 +120,7 @@ public class OtpEmailService {
             <body>
                 <div class="card">
                     <div class="header">
-                        <h1>My Ledger</h1>
+                        <h1>CashLink</h1>
                     </div>
                     <div class="body">
                         <p>Your verification code:</p>
@@ -131,7 +131,7 @@ public class OtpEmailService {
                         <div class="note">Valid for 5 minutes. Do not share this code with anyone.</div>
                     </div>
                     <div class="footer">
-                        This is an automated message from My Ledger.
+                        This is an automated message from CashLink.
                     </div>
                 </div>
             </body>

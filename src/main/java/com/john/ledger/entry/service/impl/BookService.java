@@ -70,9 +70,18 @@ public class BookService implements IBookService {
     public ServiceResponse<List<BookCategoryResponse>> getBookCategoryList(java.util.UUID adminId,
             java.util.UUID businessId) {
         try {
-            if (adminId == null)
-                return ServiceResponse.failureResponse(401, "Unauthorized");
-            List<BookCategoryEntity> entities = bookCategoryRepository.findAllByAdminId(adminId);
+            if (businessId == null) {
+                return ServiceResponse.failureResponse(400, "businessId is required");
+            }
+            if (permissionScopeHelper.isAssignedScope("business", "view")
+                    && permissionScopeHelper.getCurrentUserId().isPresent()) {
+                java.util.List<java.util.UUID> allowed = bookRepository
+                        .findBusinessIdsByAssignedUserId(permissionScopeHelper.getCurrentUserId().get());
+                if (!allowed.contains(businessId)) {
+                    return ServiceResponse.failureResponse(403, "Access denied: you can only view categories for assigned businesses.");
+                }
+            }
+            List<BookCategoryEntity> entities = bookCategoryRepository.findAllByBusinessId(businessId);
             List<BookCategoryResponse> responses = entities.stream()
                     .map(BookCategoryMapper::toResponse)
                     .collect(Collectors.toList());

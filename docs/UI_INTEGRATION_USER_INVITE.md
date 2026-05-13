@@ -1,10 +1,10 @@
-# User Invite – UI Integration Guide
+﻿# User Invite â€“ UI Integration Guide
 
 Base URL for all APIs: **`{apiBaseUrl}`** (from `environment.apiUrl`)  
-Example: `https://your-api.com/myledger-api` (no trailing slash)  
-Local: `http://localhost:8080/myledger-api`
+Example: `https://your-api.com/cashlink-api` (no trailing slash)  
+Local: `http://localhost:8080/cashlink-api`
 
-**See also:** [Add Member to this book](UI_INTEGRATION_ADD_MEMBER_TO_BOOK.md) – drawer on Transactions page (get users, get books, update book members, send invite to this book).
+**See also:** [Add Member to this book](UI_INTEGRATION_ADD_MEMBER_TO_BOOK.md) â€“ drawer on Transactions page (get users, get books, update book members, send invite to this book).
 
 ---
 
@@ -12,11 +12,11 @@ Local: `http://localhost:8080/myledger-api`
 
 Located in `src/app/dto/users/`:
 
-- **UserInviteRequest.ts** – `UserInviteItem` (email, roleId?), `UserInviteRequest` (invites[], allBooks?, bookIds?, businessId?)
-- **AcceptInviteRequest.ts** – `AcceptInviteRequest` (token, userName, password, userMobile?)
-- **RejectInviteRequest.ts** – `RejectInviteRequest` (token)
-- **InviteDetailsResponse.ts** – `InviteDetailsResponse` (email, roleId, roleName, valid, message)
-- **AcceptInviteResponse.ts** – `AcceptInviteResponse` (id, userName, userEmail, userMobile, roleId, roleName, status)
+- **UserInviteRequest.ts** â€“ `UserInviteItem` (email, roleId?), `UserInviteRequest` (invites[], allBooks?, bookIds?, businessId?)
+- **AcceptInviteRequest.ts** â€“ `AcceptInviteRequest` (token, userName, password, userMobile?)
+- **RejectInviteRequest.ts** â€“ `RejectInviteRequest` (token)
+- **InviteDetailsResponse.ts** â€“ `InviteDetailsResponse` (email, roleId, roleName, valid, message)
+- **AcceptInviteResponse.ts** â€“ `AcceptInviteResponse` (id, userName, userEmail, userMobile, roleId, roleName, status)
 
 ---
 
@@ -42,13 +42,13 @@ Located in `src/app/dto/users/`:
 - **Body:**
   - `invites` (required): `[ { "email": "...", "roleId": "..." | null }, ... ]`
   - `allBooks` (optional): `true` to grant access to all books for the given business. Omit or `false` when using `bookIds`.
-  - `bookIds` (optional): `["id1", "id2", ...]` – book IDs to grant when `allBooks` is not set. Empty or omit = no book access.
+  - `bookIds` (optional): `["id1", "id2", ...]` â€“ book IDs to grant when `allBooks` is not set. Empty or omit = no book access.
   - `businessId` (required when `allBooks` is true): business context for book access. Frontend sends the currently selected business from the header.
 
   Example: `{ "invites": [{ "email": "a@b.com", "roleId": "role-1" }], "allBooks": true, "businessId": "business-uuid" }`  
   Or: `{ "invites": [...], "bookIds": ["book-1", "book-2"], "businessId": "business-uuid" }`
 
-**Success:** `200` – show `message`, close drawer, refresh list.  
+**Success:** `200` â€“ show `message`, close drawer, refresh list.  
 **Error:** Show `response.body.message` (or generic "Failed to send invites") in toast.
 
 ---
@@ -62,8 +62,8 @@ Located in `src/app/dto/users/`:
 - **URL:** `GET {apiUrl}/users/invite-by-token?token={token}`
 - **Headers:** None (no auth).
 
-**Success 200:** `data.valid === true` → show email + role, show form.  
-**Success 200, invalid:** `data.valid === false` → show `data.message`, hide form.
+**Success 200:** `data.valid === true` â†’ show email + role, show form.  
+**Success 200, invalid:** `data.valid === false` â†’ show `data.message`, hide form.
 
 ---
 
@@ -100,11 +100,11 @@ Rejecting sets the invite to REJECTED so **no account is created** and the **adm
 
 ## 7. Frontend implementation
 
-- **Send invite:** `UserService.sendInvite(payload)` – Team screen invite drawer.
-- **Get invite:** `UserService.getInviteByToken(token)` – accept-invite page (no auth; `X-Skip-Auth: true`).
-- **Accept invite:** `UserService.acceptInvite(payload)` – accept-invite form (no auth; `X-Skip-Auth: true`).
-- **Reject invite:** `UserService.rejectInvite(payload)` – reject-invite page (no auth; `X-Skip-Auth: true`).
-- **Routes:** `/accept-invite` (token from query → get details → form → accept); `/reject-invite` (token from query → call reject → show success + link to login).
+- **Send invite:** `UserService.sendInvite(payload)` â€“ Team screen invite drawer.
+- **Get invite:** `UserService.getInviteByToken(token)` â€“ accept-invite page (no auth; `X-Skip-Auth: true`).
+- **Accept invite:** `UserService.acceptInvite(payload)` â€“ accept-invite form (no auth; `X-Skip-Auth: true`).
+- **Reject invite:** `UserService.rejectInvite(payload)` â€“ reject-invite page (no auth; `X-Skip-Auth: true`).
+- **Routes:** `/accept-invite` (token from query â†’ get details â†’ form â†’ accept); `/reject-invite` (token from query â†’ call reject â†’ show success + link to login).
 
 ---
 

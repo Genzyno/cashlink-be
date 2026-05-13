@@ -1,4 +1,4 @@
-package com.john.ledger.entry.mapper;
+﻿package com.john.ledger.entry.mapper;
 
 import com.john.ledger.entry.dto.request.TransactionSaveRequest;
 import com.john.ledger.entry.dto.request.TransactionUpdateRequest;
@@ -85,8 +85,8 @@ public class TransactionMapper {
         response.setFilePath(fileEntity.getFilePath());
         response.setFileType(fileEntity.getFileType());
         response.setFileSize(fileEntity.getFileSize());
-        response.setDownloadUrl("/myledger-api/transaction/file/download/" + fileEntity.getId());
-        response.setViewUrl("/myledger-api/transaction/file/view/" + fileEntity.getId());
+        response.setDownloadUrl("/cashlink-api/transaction/file/download/" + fileEntity.getId());
+        response.setViewUrl("/cashlink-api/transaction/file/view/" + fileEntity.getId());
         response.setCreatedTime(fileEntity.getCreatedTime());
 
         return response;

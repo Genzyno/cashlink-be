@@ -17,8 +17,8 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
 
     Page<TransactionEntity> findAllByBookId(java.util.UUID bookId, Pageable pageable);
 
-    /** Chronological order (oldest first) for running balance calculation. */
-    List<TransactionEntity> findAllByBookIdOrderByDateAscTimeAscCreatedTimeAscIdAsc(java.util.UUID bookId);
+    /** Chronological order (newest first) for fetching, reversed locally for balance calc. */
+    List<TransactionEntity> findAllByBookIdOrderByDateDescTimeDescCreatedTimeDescIdDesc(java.util.UUID bookId);
 
     @Query("SELECT t FROM TransactionEntity t WHERE t.bookId = :bookId AND " +
             "LOWER(t.remarks) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")

@@ -35,7 +35,7 @@ public class EmailVerificationEmailService {
                 
                 helper.setFrom(mailUsername);
                 helper.setTo(email);
-                helper.setSubject("Verify Your Email Address - My Ledger");
+                helper.setSubject("Verify Your Email Address - CashLink");
                 
                 String verificationLink = frontendUrl + "/verify-email?token=" + token;
                 String htmlContent = buildVerificationEmailHtml(email, verificationLink, token);
@@ -61,7 +61,7 @@ public class EmailVerificationEmailService {
                 MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
                 helper.setFrom(mailUsername);
                 helper.setTo(email);
-                helper.setSubject("Reset Your Password - My Ledger");
+                helper.setSubject("Reset Your Password - CashLink");
                 String resetLink = frontendUrl + "/reset-password?token=" + token;
                 String htmlContent = buildPasswordResetEmailHtml(resetLink);
                 helper.setText(htmlContent, true);
@@ -78,7 +78,7 @@ public class EmailVerificationEmailService {
     private String buildPasswordResetEmailHtml(String resetLink) {
         return """
             <!DOCTYPE html>
-            <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Reset Password - My Ledger</title></head>
+            <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Reset Password - CashLink</title></head>
             <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; line-height: 1.6;">
             <div style="max-width: 500px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 32px;">
             <h1 style="margin: 0 0 16px 0; font-size: 20px; color: #18181b;">Reset your password</h1>
@@ -97,7 +97,7 @@ public class EmailVerificationEmailService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-                <title>Verify Your Email - My Ledger</title>
+                <title>Verify Your Email - CashLink</title>
                 <style>
                     * {
                         margin: 0;
@@ -264,13 +264,13 @@ public class EmailVerificationEmailService {
             <body>
                 <div class="email-wrapper">
                     <div class="header">
-                        <span class="header-icon">✉️</span>
+                        <span class="header-icon">âœ‰ï¸</span>
                         <h1>Verify Your Email</h1>
                     </div>
                     <div class="content">
                         <div class="greeting">Hello!</div>
                         <div class="message">
-                            Thank you for signing up with <strong>My Ledger</strong>! We're excited to have you on board.
+                            Thank you for signing up with <strong>CashLink</strong>! We're excited to have you on board.
                             <br><br>
                             To complete your registration and start using your account, please verify your email address by clicking the button below:
                         </div>
@@ -282,22 +282,22 @@ public class EmailVerificationEmailService {
                             <code>%s</code>
                         </div>
                         <div class="warning">
-                            <strong><span class="warning-icon">⚠️</span> Important Security Notice</strong>
+                            <strong><span class="warning-icon">âš ï¸</span> Important Security Notice</strong>
                             <p>
                                 This verification link will expire in <strong>24 hours</strong> for security reasons.
-                                If you didn't create an account with My Ledger, please ignore this email or contact our support team.
+                                If you didn't create an account with CashLink, please ignore this email or contact our support team.
                             </p>
                         </div>
                     </div>
                     <div class="footer">
-                        <div class="footer-logo">My Ledger</div>
+                        <div class="footer-logo">CashLink</div>
                         <p>This is an automated message. Please do not reply to this email.</p>
                         <p>
                             If you have any questions, please contact us at 
-                            <a href="mailto:support@myledger.com">support@myledger.com</a>
+                            <a href="mailto:support@cashlink.com">support@cashlink.com</a>
                         </p>
                         <p style="margin-top: 15px; font-size: 12px; color: #999999;">
-                            © 2026 My Ledger. All rights reserved.
+                            Â© 2026 CashLink. All rights reserved.
                         </p>
                     </div>
                 </div>

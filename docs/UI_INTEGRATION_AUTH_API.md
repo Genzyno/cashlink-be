@@ -1,6 +1,6 @@
-# Auth API – Endpoints and Payloads
+﻿# Auth API â€“ Endpoints and Payloads
 
-Base path: `{apiUrl}/auth` (e.g. `http://localhost:8080/myledger-api/auth`).
+Base path: `{apiUrl}/auth` (e.g. `http://localhost:8080/cashlink-api/auth`).
 
 **Request headers (all API calls when user is logged in):**  
 The frontend should send the logged-in user ID on every authenticated request so the backend can scope data by user. Use these headers for all endpoints (except auth endpoints that use `X-Skip-Auth` or do not require auth):
@@ -73,7 +73,7 @@ All POST responses use the wrapper below unless noted.
 
 **When user is already registered (sign-up, intent = `"register"`):** Backend returns **409** with message `"User already registered. Please login."`. Frontend should show this message and direct the user to the login flow.
 
-**When user is new (sign-up, intent = `"register"`):** Backend creates the user, assigns **Super Admin** role (full permissions), then returns the same success response (tokens + user). **Do not create any demo business or demo book** for the new user—only the user record. Frontend will show only "Create new business" in the header and on the dashboard until the user creates one.
+**When user is new (sign-up, intent = `"register"`):** Backend creates the user, assigns **Super Admin** role (full permissions), then returns the same success response (tokens + user). **Do not create any demo business or demo book** for the new userâ€”only the user record. Frontend will show only "Create new business" in the header and on the dashboard until the user creates one.
 
 **Success response:** `statusCode: 200` or `201`, with `data` containing tokens and user:
 
@@ -117,8 +117,8 @@ All POST responses use the wrapper below unless noted.
 | user.name        | string | Display name                                     |
 | user.email       | string | Email                                            |
 | user.roleName    | string | Role display name                                |
-| user.permissions | object | Resource → list of actions (e.g. view, create)  |
-| user.permissionScopes | object | Optional; screen → action → `"all"` or `"assigned"` |
+| user.permissions | object | Resource â†’ list of actions (e.g. view, create)  |
+| user.permissionScopes | object | Optional; screen â†’ action â†’ `"all"` or `"assigned"` |
 
 ---
 
@@ -154,13 +154,13 @@ All POST responses use the wrapper below unless noted.
 |-------|--------|----------|----------------------------|
 | email | string | Yes      | Trimmed, lowercased email  |
 
-**Success response:** `statusCode: 200` or `201`. Frontend shows a generic “If an account exists, we’ve sent reset instructions” message. Backend sends a reset link to the email (link expires in 1 hour).
+**Success response:** `statusCode: 200` or `201`. Frontend shows a generic â€œIf an account exists, weâ€™ve sent reset instructionsâ€ message. Backend sends a reset link to the email (link expires in 1 hour).
 
 ---
 
 ## 5. Google Sign-In (redirect)
 
-**See [Google Sign-In – Step-by-Step Setup](GOOGLE_SIGNIN_SETUP.md) for full setup (Google Console, backend config, frontend, troubleshooting).**
+**See [Google Sign-In â€“ Step-by-Step Setup](GOOGLE_SIGNIN_SETUP.md) for full setup (Google Console, backend config, frontend, troubleshooting).**
 
 **Endpoint:** `GET /auth/google`
 
@@ -179,7 +179,7 @@ All POST responses use the wrapper below unless noted.
 3. Backend exchanges code for tokens, finds or **creates** user (if new), issues JWT.
 4. Backend redirects user to `redirect_uri` with tokens in the URL fragment: `#access_token=...&refresh_token=...&expires_in=...&token_type=Bearer`
 
-**New user (first-time Google sign-in):** Backend **creates** the user with **Super Admin** role. **Do not create any demo business or demo book**—only the user record. Tokens are issued and redirect contains tokens. Frontend should open the dashboard; if the user has **no businesses**, show an empty state and a clear **"Create new business"** (or "Create your first business") flow so they can create one.
+**New user (first-time Google sign-in):** Backend **creates** the user with **Super Admin** role. **Do not create any demo business or demo book**â€”only the user record. Tokens are issued and redirect contains tokens. Frontend should open the dashboard; if the user has **no businesses**, show an empty state and a clear **"Create new business"** (or "Create your first business") flow so they can create one.
 
 Frontend must read the fragment after redirect and store tokens. If Google is not configured (`app.google.client-id` etc. empty), backend returns 503.
 

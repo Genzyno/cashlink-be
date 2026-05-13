@@ -24,11 +24,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+
 import java.util.stream.Collectors;
 
 @Service
@@ -46,28 +43,23 @@ public class BookService implements IBookService {
     PermissionScopeHelper permissionScopeHelper;
 
     @Override
-    public ServiceResponse<BookCategoryResponse> saveBookCategory(BookCategorySaveRequest request) {
+    public ServiceResponse<BookCategoryResponse> saveBookCategory(java.util.UUID adminId,
+            BookCategorySaveRequest request) {
         try {
-
-            // validation: businessId is required (null when frontend sends legacy numeric ID)
-            if (request.getBusinessId() == null) {
-                return ServiceResponse.failureResponse(400,
-                        "businessId is required. Use the business UUID from the get-all-business API.");
+            if (adminId == null)
+                return ServiceResponse.failureResponse(401, "Unauthorized");
+            // validation: businessId is optional now for system/global categories
+            // validation: duplicate check within admin scope
+            Optional<BookCategoryEntity> existing = bookCategoryRepository
+                    .findByCategoryNameAndAdminId(request.getCategoryName(), adminId);
+            if (existing.isPresent()) {
+                return ServiceResponse.failureResponse(409, "Category already exists in your scope");
             }
 
-            //validation
-            Optional<BookCategoryEntity> existingCategory = bookCategoryRepository.findByCategoryNameAndBusinessIdAndCategoryType(request.getCategoryName(), request.getBusinessId(), request.getCategoryType());
-            if (existingCategory.isPresent()) {
-                return ServiceResponse.failureResponse(409, "Category Already Exists");
-            }
-            // Convert DTO → Entity
-            BookCategoryEntity categoryEntity = BookCategoryMapper.toSaveEntity(request);
-            // Persist entity
-            BookCategoryEntity savedEntity = bookCategoryRepository.save(categoryEntity);
-            // Convert Entity → Response DTO
-            BookCategoryResponse responseDto = BookCategoryMapper.toResponse(savedEntity);
-            // Prepare standardized response
-            return ServiceResponse.successResponse(201, ResponseMessages.CREATED, responseDto);
+            BookCategoryEntity entity = BookCategoryMapper.toSaveEntity(request);
+            entity.setAdminId(adminId);
+            BookCategoryEntity saved = bookCategoryRepository.save(entity);
+            return ServiceResponse.successResponse(201, ResponseMessages.CREATED, BookCategoryMapper.toResponse(saved));
         } catch (Exception e) {
             e.printStackTrace();
             return ServiceResponse.failureResponse(500, ResponseMessages.INTERNAL_ERROR);
@@ -75,24 +67,17 @@ public class BookService implements IBookService {
     }
 
     @Override
-    public ServiceResponse<List<BookCategoryResponse>> getBookCategoryList(java.util.UUID businessId) {
+    public ServiceResponse<List<BookCategoryResponse>> getBookCategoryList(java.util.UUID adminId,
+            java.util.UUID businessId) {
         try {
-            if (businessId == null) {
-                return ServiceResponse.failureResponse(400,
-                        "businessId is required. Use the business UUID from the get-all-business API.");
-            }
-            if (permissionScopeHelper.isAssignedScope("bookCategory", "view") && permissionScopeHelper.getCurrentUserId().isPresent()) {
-                java.util.List<java.util.UUID> allowed = bookRepository.findBusinessIdsByAssignedUserId(permissionScopeHelper.getCurrentUserId().get());
-                if (!allowed.contains(businessId)) {
-                    return ServiceResponse.failureResponse(403, "Access denied: you can only view book categories for assigned businesses.");
-                }
-            }
-            List<BookCategoryEntity> entities = bookCategoryRepository.findAllByBusinessId(businessId);
-            if (entities.isEmpty()) {
-                return ServiceResponse.failureResponse(204, ResponseMessages.NO_RECORD);
-            }
-            List<BookCategoryResponse> responses = entities.stream().map(BookCategoryMapper::toResponse).collect(Collectors.toList());
-            return ServiceResponse.successResponse(200, "Book Category list fetched successfully", responses);
+            if (adminId == null)
+                return ServiceResponse.failureResponse(401, "Unauthorized");
+            List<BookCategoryEntity> entities = bookCategoryRepository.findAllByAdminId(adminId);
+            List<BookCategoryResponse> responses = entities.stream()
+                    .map(BookCategoryMapper::toResponse)
+                    .collect(Collectors.toList());
+            return ServiceResponse.successResponse(200,
+                    entities.isEmpty() ? ResponseMessages.NO_RECORD : "Fetched successfully", responses);
         } catch (Exception e) {
             e.printStackTrace();
             return ServiceResponse.failureResponse(500, ResponseMessages.INTERNAL_ERROR);
@@ -100,23 +85,25 @@ public class BookService implements IBookService {
     }
 
     @Override
-    public ServiceResponse<BookCategoryResponse> updateBookCategory(java.util.UUID id, BookCategoryUpdateRequest request) {
+    public ServiceResponse<BookCategoryResponse> updateBookCategory(java.util.UUID adminId, java.util.UUID id,
+            BookCategoryUpdateRequest request) {
         try {
+            if (adminId == null)
+                return ServiceResponse.failureResponse(401, "Unauthorized");
+            Optional<BookCategoryEntity> existing = bookCategoryRepository.findById(id);
+            if (existing.isEmpty())
+                return ServiceResponse.failureResponse(404, "Not found");
 
-            //validation
-            Optional<BookCategoryEntity> existingBookCategory = bookCategoryRepository.findById(id);
-            if (existingBookCategory.isEmpty()) {
-                return ServiceResponse.failureResponse(404, "Book Category Not Found");
-            }
+            // Check ownership
+            if (existing.get().getAdminId() == null)
+                return ServiceResponse.failureResponse(403, "System categories cannot be modified");
+            if (!existing.get().getAdminId().equals(adminId))
+                return ServiceResponse.failureResponse(403, "Access denied");
 
-            BookCategoryEntity bookCategoryEntity = existingBookCategory.get();
-            BookCategoryMapper.toUpdateEntity(request, bookCategoryEntity);
-            // Persist entity
-            BookCategoryEntity savedEntity = bookCategoryRepository.save(bookCategoryEntity);
-            // Convert Entity → Response DTO
-            BookCategoryResponse responseDto = BookCategoryMapper.toResponse(savedEntity);
-            // Prepare standardized response
-            return ServiceResponse.successResponse(200, ResponseMessages.UPDATED, responseDto);
+            BookCategoryEntity entity = existing.get();
+            BookCategoryMapper.toUpdateEntity(request, entity);
+            return ServiceResponse.successResponse(200, ResponseMessages.UPDATED,
+                    BookCategoryMapper.toResponse(bookCategoryRepository.save(entity)));
         } catch (Exception e) {
             e.printStackTrace();
             return ServiceResponse.failureResponse(500, ResponseMessages.INTERNAL_ERROR);
@@ -124,15 +111,20 @@ public class BookService implements IBookService {
     }
 
     @Override
-    public ServiceResponse<BookCategoryResponse> deleteBookCategory(java.util.UUID id) {
+    public ServiceResponse<BookCategoryResponse> deleteBookCategory(java.util.UUID adminId, java.util.UUID id) {
         try {
+            if (adminId == null)
+                return ServiceResponse.failureResponse(401, "Unauthorized");
+            Optional<BookCategoryEntity> existing = bookCategoryRepository.findById(id);
+            if (existing.isEmpty())
+                return ServiceResponse.failureResponse(404, "Not found");
 
-            //validation
-            Optional<BookCategoryEntity> existingBookCategory = bookCategoryRepository.findById(id);
-            if (existingBookCategory.isEmpty()) {
-                return ServiceResponse.failureResponse(404, "Book Category Not Found!");
-            }
-            // Delete entity
+            // Check ownership
+            if (existing.get().getAdminId() == null)
+                return ServiceResponse.failureResponse(403, "System categories cannot be deleted");
+            if (!existing.get().getAdminId().equals(adminId))
+                return ServiceResponse.failureResponse(403, "Access denied");
+
             bookCategoryRepository.deleteById(id);
             return ServiceResponse.successResponse(200, ResponseMessages.DELETED, null);
         } catch (Exception e) {
@@ -150,7 +142,8 @@ public class BookService implements IBookService {
                         "businessId is required. Use the business UUID from the get-all-business API.");
             }
             // Unique per business
-            Optional<BookEntity> existingBookName = bookRepository.findByBookNameAndBusinessId(request.getBookName(), request.getBusinessId());
+            Optional<BookEntity> existingBookName = bookRepository.findByBookNameAndBusinessId(request.getBookName(),
+                    request.getBusinessId());
             if (existingBookName.isPresent()) {
                 return ServiceResponse.failureResponse(409, "Book Name Already Exists for this business");
             }
@@ -177,9 +170,9 @@ public class BookService implements IBookService {
         }
     }
 
-
     @Override
-    public ServiceResponse<PaginatedResponse<BookResponse>> getPaginatedBook(java.util.UUID businessId, int page, int size) {
+    public ServiceResponse<PaginatedResponse<BookResponse>> getPaginatedBook(java.util.UUID businessId, int page,
+            int size) {
         try {
             if (businessId == null) {
                 return ServiceResponse.failureResponse(400,
@@ -187,13 +180,16 @@ public class BookService implements IBookService {
             }
             PageRequest pageRequest = PageRequest.of(page, size);
             Page<BookEntity> bookPage;
-            if (permissionScopeHelper.isAssignedScope("book", "view") && permissionScopeHelper.getCurrentUserId().isPresent()) {
-                bookPage = bookRepository.findByBusinessIdAndAssignedUserId(businessId, permissionScopeHelper.getCurrentUserId().get(), pageRequest);
+            if (permissionScopeHelper.isAssignedScope("book", "view")
+                    && permissionScopeHelper.getCurrentUserId().isPresent()) {
+                bookPage = bookRepository.findByBusinessIdAndAssignedUserId(businessId,
+                        permissionScopeHelper.getCurrentUserId().get(), pageRequest);
             } else {
                 bookPage = bookRepository.findByBusinessId(businessId, pageRequest);
             }
             Page<BookResponse> bookResponsePage = bookPage.map(BookMapper::toResponse);
-            PaginatedResponse<BookResponse> paginatedResponse = PaginationUtil.createPaginatedResponse(bookResponsePage);
+            PaginatedResponse<BookResponse> paginatedResponse = PaginationUtil
+                    .createPaginatedResponse(bookResponsePage);
             return ServiceResponse.successResponse(200, "Book list fetched", paginatedResponse);
 
         } catch (Exception e) {
@@ -213,7 +209,8 @@ public class BookService implements IBookService {
 
             BookEntity bookEntity = existingBook.get();
 
-            // Fetch users if assignedUserIds are provided (filter nulls from legacy numeric IDs)
+            // Fetch users if assignedUserIds are provided (filter nulls from legacy numeric
+            // IDs)
             Set<UserEntity> usersToAssign = null;
             List<java.util.UUID> ids = request.getAssignedUserIds() == null
                     ? Collections.emptyList()
@@ -247,7 +244,7 @@ public class BookService implements IBookService {
     public ServiceResponse<BookResponse> deleteBook(java.util.UUID id) {
         try {
 
-            //validation
+            // validation
             Optional<BookEntity> existingBook = bookRepository.findById(id);
             if (existingBook.isEmpty()) {
                 return ServiceResponse.failureResponse(404, "Book Not Found!");
@@ -262,7 +259,8 @@ public class BookService implements IBookService {
     }
 
     @Override
-    public ServiceResponse<PaginatedResponse<BookResponse>> searchBook(java.util.UUID businessId, String searchTerm, int page, int size) {
+    public ServiceResponse<PaginatedResponse<BookResponse>> searchBook(java.util.UUID businessId, String searchTerm,
+            int page, int size) {
         try {
             if (businessId == null) {
                 return ServiceResponse.failureResponse(400,
@@ -274,15 +272,18 @@ public class BookService implements IBookService {
             Optional<java.util.UUID> userId = permissionScopeHelper.getCurrentUserId();
             if (assignedScope && userId.isPresent()) {
                 if (searchTerm == null || searchTerm.trim().isEmpty()) {
-                    bookEntityPage = bookRepository.findByBusinessIdAndAssignedUserId(businessId, userId.get(), pageRequest);
+                    bookEntityPage = bookRepository.findByBusinessIdAndAssignedUserId(businessId, userId.get(),
+                            pageRequest);
                 } else {
-                    bookEntityPage = bookRepository.findByBusinessIdAndAssignedUserIdAndBookNameContaining(businessId, userId.get(), searchTerm.trim(), pageRequest);
+                    bookEntityPage = bookRepository.findByBusinessIdAndAssignedUserIdAndBookNameContaining(businessId,
+                            userId.get(), searchTerm.trim(), pageRequest);
                 }
             } else {
                 if (searchTerm == null || searchTerm.trim().isEmpty()) {
                     bookEntityPage = bookRepository.findByBusinessId(businessId, pageRequest);
                 } else {
-                    bookEntityPage = bookRepository.findByBusinessIdAndBookNameContainingIgnoreCase(businessId, searchTerm.trim(), pageRequest);
+                    bookEntityPage = bookRepository.findByBusinessIdAndBookNameContainingIgnoreCase(businessId,
+                            searchTerm.trim(), pageRequest);
                 }
             }
             Page<BookResponse> dtoPage = bookEntityPage.map(BookMapper::toResponse);
@@ -300,7 +301,8 @@ public class BookService implements IBookService {
     public ServiceResponse<PaymentModeResponse> savePaymentMode(PaymentModeSaveRequest request) {
         try {
             // Validation
-            Optional<PaymentModeEntity> existingPaymentMode = paymentModeRepository.findByPaymentModeNameAndBusinessId(request.getPaymentModeName(), request.getBusinessId());
+            Optional<PaymentModeEntity> existingPaymentMode = paymentModeRepository
+                    .findByPaymentModeNameAndBusinessId(request.getPaymentModeName(), request.getBusinessId());
             if (existingPaymentMode.isPresent()) {
                 return ServiceResponse.failureResponse(409, "Payment Mode Already Exists");
             }
@@ -325,17 +327,21 @@ public class BookService implements IBookService {
                 return ServiceResponse.failureResponse(400,
                         "businessId is required. Use the business UUID from the get-all-business API.");
             }
-            if (permissionScopeHelper.isAssignedScope("business", "view") && permissionScopeHelper.getCurrentUserId().isPresent()) {
-                java.util.List<java.util.UUID> allowed = bookRepository.findBusinessIdsByAssignedUserId(permissionScopeHelper.getCurrentUserId().get());
+            if (permissionScopeHelper.isAssignedScope("business", "view")
+                    && permissionScopeHelper.getCurrentUserId().isPresent()) {
+                java.util.List<java.util.UUID> allowed = bookRepository
+                        .findBusinessIdsByAssignedUserId(permissionScopeHelper.getCurrentUserId().get());
                 if (!allowed.contains(businessId)) {
-                    return ServiceResponse.failureResponse(403, "Access denied: you can only view payment modes for assigned businesses.");
+                    return ServiceResponse.failureResponse(403,
+                            "Access denied: you can only view payment modes for assigned businesses.");
                 }
             }
             List<PaymentModeEntity> entities = paymentModeRepository.findAllByBusinessId(businessId);
             if (entities.isEmpty()) {
                 return ServiceResponse.failureResponse(204, ResponseMessages.NO_RECORD);
             }
-            List<PaymentModeResponse> responses = entities.stream().map(PaymentModeMapper::toResponse).collect(Collectors.toList());
+            List<PaymentModeResponse> responses = entities.stream().map(PaymentModeMapper::toResponse)
+                    .collect(Collectors.toList());
             return ServiceResponse.successResponse(200, "Payment Mode list fetched successfully", responses);
         } catch (Exception e) {
             e.printStackTrace();

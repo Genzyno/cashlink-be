@@ -1,5 +1,6 @@
 package com.john.ledger.entry.controller;
 
+import com.john.ledger.common.util.CurrentUserHolder;
 import com.john.ledger.common.util.PaginatedResponse;
 import com.john.ledger.common.util.ServiceResponse;
 import com.john.ledger.entry.dto.request.RoleSaveRequest;
@@ -27,8 +28,13 @@ public class RoleController {
     public ResponseEntity<ServiceResponse<PaginatedResponse<RoleResponse>>> getAllRoles(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "100") int size) {
+        Optional<UUID> adminIdOpt = CurrentUserHolder.getUserId();
+        if (adminIdOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         try {
-            ServiceResponse<PaginatedResponse<RoleResponse>> response = roleService.getAllRoles(page, size);
+            UUID adminId = adminIdOpt.get();
+            ServiceResponse<PaginatedResponse<RoleResponse>> response = roleService.getAllRoles(adminId, page, size);
             return ResponseEntity.status(HttpStatus.valueOf(response.getStatusCode())).body(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -38,8 +44,13 @@ public class RoleController {
     @Operation(summary = "Create role")
     @PostMapping("/save-role")
     public ResponseEntity<ServiceResponse<RoleResponse>> saveRole(@RequestBody RoleSaveRequest request) {
+        Optional<UUID> adminIdOpt = CurrentUserHolder.getUserId();
+        if (adminIdOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         try {
-            ServiceResponse<RoleResponse> response = roleService.saveRole(request);
+            UUID adminId = adminIdOpt.get();
+            ServiceResponse<RoleResponse> response = roleService.saveRole(adminId, request);
             return ResponseEntity.status(HttpStatus.valueOf(response.getStatusCode())).body(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -55,9 +66,14 @@ public class RoleController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ServiceResponse.failureResponse(400, "Role ID is required"));
         }
+        Optional<UUID> adminIdOpt = CurrentUserHolder.getUserId();
+        if (adminIdOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         try {
+            UUID adminId = adminIdOpt.get();
             request.setId(id.get());
-            ServiceResponse<RoleResponse> response = roleService.updateRole(id.get(), request);
+            ServiceResponse<RoleResponse> response = roleService.updateRole(adminId, id.get(), request);
             return ResponseEntity.status(HttpStatus.valueOf(response.getStatusCode())).body(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -71,8 +87,13 @@ public class RoleController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ServiceResponse.failureResponse(400, "Role ID is required"));
         }
+        Optional<UUID> adminIdOpt = CurrentUserHolder.getUserId();
+        if (adminIdOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         try {
-            ServiceResponse<RoleResponse> response = roleService.deleteRole(id.get());
+            UUID adminId = adminIdOpt.get();
+            ServiceResponse<RoleResponse> response = roleService.deleteRole(adminId, id.get());
             return ResponseEntity.status(HttpStatus.valueOf(response.getStatusCode())).body(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);

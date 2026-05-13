@@ -249,8 +249,8 @@ public class TransactionService implements ITransactionService {
             }
             ServiceResponse<?> accessDenied = checkBookAccessForAssignedScope(bookId);
             if (accessDenied != null) return ServiceResponse.failureResponse(accessDenied.getStatusCode(), accessDenied.getMessage());
-            // Sort: newest first by date, then time, then id (same-minute transactions ordered by id DESC)
-            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("id"));
+            // Sort: newest first by date, then time, then createdTime (milliseconds), then id
+            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("createdTime"), Sort.Order.desc("id"));
             PageRequest pageRequest = PageRequest.of(page, size, sort);
 
             Page<TransactionEntity> transactionPage = transactionRepository.findAllByBookId(bookId, pageRequest);
@@ -314,8 +314,8 @@ public class TransactionService implements ITransactionService {
             }
             ServiceResponse<?> accessDenied = checkBookAccessForAssignedScope(bookId);
             if (accessDenied != null) return ServiceResponse.failureResponse(accessDenied.getStatusCode(), accessDenied.getMessage());
-            // Sort: newest first by date, then time, then id (same-minute transactions ordered by id DESC)
-            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("id"));
+            // Sort: newest first by date, then time, then createdTime (milliseconds), then id
+            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("createdTime"), Sort.Order.desc("id"));
             PageRequest pageRequest = PageRequest.of(page, size, sort);
 
             Page<TransactionEntity> transactionPage;
@@ -398,7 +398,7 @@ public class TransactionService implements ITransactionService {
             }
             ServiceResponse<?> accessDenied = checkBookAccessForAssignedScope(bookId);
             if (accessDenied != null) return ServiceResponse.failureResponse(accessDenied.getStatusCode(), accessDenied.getMessage());
-            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("id"));
+            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("createdTime"), Sort.Order.desc("id"));
             PageRequest pageRequest = PageRequest.of(page, size, sort);
 
             Specification<TransactionEntity> spec = TransactionFilterSpecification.filterBy(
@@ -483,7 +483,7 @@ public class TransactionService implements ITransactionService {
                     emptyToNull(request.getCreatedByIds()),
                     emptyToNull(request.getUpdatedByIds()));
 
-            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("id"));
+            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("createdTime"), Sort.Order.desc("id"));
             PageRequest pageRequest = PageRequest.of(0, EXPORT_MAX_ROWS, sort);
             List<TransactionEntity> list = transactionRepository.findAll(spec, pageRequest).getContent();
 
@@ -607,7 +607,7 @@ public class TransactionService implements ITransactionService {
             }
             ServiceResponse<?> accessDenied = checkBookAccessForAssignedScope(bookId);
             if (accessDenied != null) return ServiceResponse.failureResponse(accessDenied.getStatusCode(), accessDenied.getMessage());
-            List<TransactionEntity> chronological = transactionRepository.findAllByBookIdOrderByDateAscTimeAscIdAsc(bookId);
+            List<TransactionEntity> chronological = transactionRepository.findAllByBookIdOrderByDateAscTimeAscCreatedTimeAscIdAsc(bookId);
 
             BigDecimal runningBalance = BigDecimal.ZERO;
             List<TransactionResponse> withRunning = new ArrayList<>();
@@ -623,6 +623,11 @@ public class TransactionService implements ITransactionService {
                 withRunning.add(response);
             }
 
+            // Reverse the list so the newest transactions are at the top for the dashboard
+            Collections.reverse(withRunning);
+            List<TransactionEntity> reversedChronological = new ArrayList<>(chronological);
+            Collections.reverse(reversedChronological);
+
             Map<java.util.UUID, String> categoryNames = batchFetchCategoryNames(chronological);
             Map<java.util.UUID, String> paymentModeNames = batchFetchPaymentModeNames(chronological);
             Map<java.util.UUID, String> userNames = batchFetchUserNames(chronological);
@@ -634,6 +639,9 @@ public class TransactionService implements ITransactionService {
             }
 
             TransactionSummaryResponse summary = getSummaryForBook(bookId);
+            // Reverse to show latest at top
+            Collections.reverse(withRunning);
+
             TransactionDashboardResponse dashboard = TransactionDashboardResponse.builder()
                     .summary(summary)
                     .transactions(withRunning)

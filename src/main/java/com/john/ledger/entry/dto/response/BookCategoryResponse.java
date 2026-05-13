@@ -20,4 +20,5 @@ public class BookCategoryResponse {
     private Status status;
     private LocalDateTime createdTime;
     private LocalDateTime updatedTime;
+    private java.util.UUID adminId;
 }

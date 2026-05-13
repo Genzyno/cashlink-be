@@ -1,6 +1,5 @@
 package com.john.ledger.config;
 
-import com.john.ledger.config.AppProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,9 +17,11 @@ public class CorsConfig {
     private AppProperties appProperties;
 
     /**
-     * CORS ConfigurationSource Bean - Returns the CORS configuration for all requests.
+     * CORS ConfigurationSource Bean - Returns the CORS configuration for all
+     * requests.
      * Used by Spring Security's SecurityFilterChain to properly handle CORS.
-     * Allows specified origins and includes Authorization header in preflight responses.
+     * Allows specified origins and includes Authorization header in preflight
+     * responses.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {

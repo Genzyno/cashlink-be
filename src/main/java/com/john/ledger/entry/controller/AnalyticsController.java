@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("analytics")
@@ -25,8 +24,8 @@ public class AnalyticsController {
     @Operation(summary = "Category-wise analytics: totals by category and transaction type")
     @GetMapping("/category-wise")
     public ResponseEntity<ServiceResponse<CategoryWiseResponse>> getCategoryWise(
-            @RequestParam(required = false) UUID businessId,
-            @RequestParam(required = false) UUID bookId,
+            @RequestParam(required = false) java.util.UUID businessId,
+            @RequestParam(required = false) java.util.UUID bookId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
         ServiceResponse<CategoryWiseResponse> response = analyticsService.getCategoryWise(businessId, bookId, fromDate, toDate);
@@ -36,8 +35,8 @@ public class AnalyticsController {
     @Operation(summary = "Month-wise analytics: totals per month")
     @GetMapping("/month-wise")
     public ResponseEntity<ServiceResponse<MonthWiseResponse>> getMonthWise(
-            @RequestParam(required = false) UUID businessId,
-            @RequestParam(required = false) UUID bookId,
+            @RequestParam(required = false) java.util.UUID businessId,
+            @RequestParam(required = false) java.util.UUID bookId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
         ServiceResponse<MonthWiseResponse> response = analyticsService.getMonthWise(businessId, bookId, fromDate, toDate);
@@ -56,8 +55,8 @@ public class AnalyticsController {
     @Operation(summary = "Time-series analytics: by day, month, or year (granularity=day|month|year)")
     @GetMapping("/time-series")
     public ResponseEntity<ServiceResponse<TimeSeriesResponse>> getTimeSeries(
-            @RequestParam(required = false) UUID businessId,
-            @RequestParam(required = false) UUID bookId,
+            @RequestParam(required = false) java.util.UUID businessId,
+            @RequestParam(required = false) java.util.UUID bookId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false, defaultValue = "month") String granularity) {
@@ -65,3 +64,4 @@ public class AnalyticsController {
         return ResponseEntity.status(HttpStatus.valueOf(response.getStatusCode())).body(response);
     }
 }
+

@@ -7,19 +7,19 @@ import com.john.ledger.entry.dto.response.BookCategoryResponse;
 import com.john.ledger.entry.dto.response.BookResponse;
 import com.john.ledger.entry.dto.response.PaymentModeResponse;
 
-
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public interface IBookService {
 
-    ServiceResponse<BookCategoryResponse> saveBookCategory(BookCategorySaveRequest request);
+    // ===================== Book Category =====================
+    ServiceResponse<BookCategoryResponse> saveBookCategory(java.util.UUID adminId, BookCategorySaveRequest request);
 
-    ServiceResponse<List<BookCategoryResponse>> getBookCategoryList(UUID businessId);
+    ServiceResponse<List<BookCategoryResponse>> getBookCategoryList(java.util.UUID adminId, java.util.UUID businessId);
 
-    ServiceResponse<BookCategoryResponse> updateBookCategory(UUID id, BookCategoryUpdateRequest request);
+    ServiceResponse<BookCategoryResponse> updateBookCategory(java.util.UUID adminId, java.util.UUID id,
+            BookCategoryUpdateRequest request);
 
-    ServiceResponse<BookCategoryResponse> deleteBookCategory(UUID id);
+    ServiceResponse<BookCategoryResponse> deleteBookCategory(java.util.UUID adminId, java.util.UUID id);
 
     ServiceResponse<BookResponse> saveBook(BookSaveRequest request);
 

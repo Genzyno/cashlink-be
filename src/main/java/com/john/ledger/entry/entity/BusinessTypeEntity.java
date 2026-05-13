@@ -22,4 +22,7 @@ public class BusinessTypeEntity {
     @Column(nullable = false, length = 50)
     @Size(min = 3, max = 50)
     private String businessType;
+
+    @Column(name = "admin_id")
+    private UUID adminId;
 }

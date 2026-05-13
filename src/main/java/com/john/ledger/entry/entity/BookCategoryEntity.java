@@ -40,6 +40,9 @@ public class BookCategoryEntity {
     @Column(nullable = false, length = 10)
     private Status status;
 
+    @Column(name = "admin_id")
+    private UUID adminId;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdTime;

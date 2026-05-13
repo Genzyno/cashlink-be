@@ -9,18 +9,19 @@ import com.john.ledger.entry.dto.request.BusinessUpdateRequest;
 import com.john.ledger.entry.dto.response.BusinessResponse;
 import com.john.ledger.entry.dto.response.BusinessTypeResponse;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public interface IBusinessService {
 
-    ServiceResponse<BusinessTypeResponse> saveBusinessType(BusinessTypeSaveRequest request);
+    // ---------- Business Type ----------
+    ServiceResponse<BusinessTypeResponse> saveBusinessType(java.util.UUID adminId, BusinessTypeSaveRequest request);
 
-    ServiceResponse<List<BusinessTypeResponse>> getBusinessTypeList();
+    ServiceResponse<List<BusinessTypeResponse>> getBusinessTypeList(java.util.UUID adminId);
 
-    ServiceResponse<BusinessTypeResponse> updateBusinessType(UUID id, BusinessTypeUpdateRequest request);
+    ServiceResponse<BusinessTypeResponse> updateBusinessType(java.util.UUID adminId, java.util.UUID id,
+            BusinessTypeUpdateRequest request);
 
-    ServiceResponse<BusinessTypeResponse> deleteBusinessType(UUID id);
+    ServiceResponse<BusinessTypeResponse> deleteBusinessType(java.util.UUID adminId, java.util.UUID id);
 
     ServiceResponse<BusinessResponse> saveBusiness(BusinessSaveRequest request);
 

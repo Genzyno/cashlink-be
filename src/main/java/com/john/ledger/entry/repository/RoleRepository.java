@@ -14,7 +14,9 @@ import java.util.UUID;
 public interface RoleRepository extends JpaRepository<RoleEntity, UUID> {
     Optional<RoleEntity> findByRoleName(String roleName);
 
-    /** All roles paginated, Super Admin first then by role name. */
-    @Query("SELECT r FROM RoleEntity r ORDER BY CASE WHEN r.roleName = 'Super Admin' THEN 0 ELSE 1 END ASC, r.roleName ASC")
-    Page<RoleEntity> findAllOrderedByDisplayOrder(Pageable pageable);
+    /** All roles paginated, scoped to admin, Super Admin first then by role name. */
+    @Query("SELECT r FROM RoleEntity r WHERE r.adminId IS NULL OR r.adminId = :adminId ORDER BY CASE WHEN r.roleName = 'Super Admin' THEN 0 ELSE 1 END ASC, r.roleName ASC")
+    Page<RoleEntity> findAllByAdminId(UUID adminId, Pageable pageable);
+
+    Optional<RoleEntity> findByRoleNameAndAdminId(String roleName, UUID adminId);
 }

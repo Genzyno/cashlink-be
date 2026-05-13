@@ -7,5 +7,6 @@ public class BusinessTypeResponse {
 
     private java.util.UUID id;
     private String businessType;
+    private java.util.UUID adminId;
 
 }

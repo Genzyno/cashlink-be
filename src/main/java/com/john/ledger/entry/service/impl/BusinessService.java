@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 @Service
 public class BusinessService implements IBusinessService {
 
@@ -39,22 +38,19 @@ public class BusinessService implements IBusinessService {
     PermissionScopeHelper permissionScopeHelper;
 
     @Override
-    public ServiceResponse<BusinessTypeResponse> saveBusinessType(BusinessTypeSaveRequest request) {
+    public ServiceResponse<BusinessTypeResponse> saveBusinessType(java.util.UUID adminId, BusinessTypeSaveRequest request) {
         try {
-
-            //validation
-            Optional<BusinessTypeEntity> existingBusinessType = businessTypeRepository.findByBusinessType(request.getBusinessType());
-            if (existingBusinessType.isPresent()) {
-                return ServiceResponse.failureResponse(409, "BusinessType Already Exists");
+            if (adminId == null) return ServiceResponse.failureResponse(401, "Unauthorized");
+            // Check for duplicates in my scope (system or mine)
+            Optional<BusinessTypeEntity> duplicate = businessTypeRepository.findByBusinessTypeAndAdminId(request.getBusinessType().trim(), adminId);
+            if (duplicate.isPresent()) {
+                return ServiceResponse.failureResponse(409, "Business type already exists in your scope");
             }
-            // Convert DTO → Entity
-            BusinessTypeEntity businessTypeEntity = BusinessTypeMapper.toSaveEntity(request);
-            // Persist entity
-            BusinessTypeEntity savedEntity = businessTypeRepository.save(businessTypeEntity);
-            // Convert Entity → Response DTO
-            BusinessTypeResponse responseDto = BusinessTypeMapper.toResponse(savedEntity);
-            // Prepare standardized response
-            return ServiceResponse.successResponse(201, ResponseMessages.CREATED, responseDto);
+
+            BusinessTypeEntity entity = BusinessTypeMapper.toSaveEntity(request);
+            entity.setAdminId(adminId);
+            BusinessTypeEntity saved = businessTypeRepository.save(entity);
+            return ServiceResponse.successResponse(201, ResponseMessages.CREATED, BusinessTypeMapper.toResponse(saved));
         } catch (Exception e) {
             e.printStackTrace();
             return ServiceResponse.failureResponse(500, ResponseMessages.INTERNAL_ERROR);
@@ -62,14 +58,14 @@ public class BusinessService implements IBusinessService {
     }
 
     @Override
-    public ServiceResponse<List<BusinessTypeResponse>> getBusinessTypeList() {
+    public ServiceResponse<List<BusinessTypeResponse>> getBusinessTypeList(java.util.UUID adminId) {
         try {
-            List<BusinessTypeEntity> entities = businessTypeRepository.findAll();
-            List<BusinessTypeResponse> responses = entities.isEmpty()
-                    ? List.of()
-                    : entities.stream().map(BusinessTypeMapper::toResponse).collect(Collectors.toList());
-            return ServiceResponse.successResponse(200, entities.isEmpty() ? ResponseMessages.NO_RECORD : "Business Type list fetched successfully", responses);
-
+            if (adminId == null) return ServiceResponse.failureResponse(401, "Unauthorized");
+            List<BusinessTypeEntity> entities = businessTypeRepository.findAllByAdminId(adminId);
+            List<BusinessTypeResponse> responses = entities.stream()
+                    .map(BusinessTypeMapper::toResponse)
+                    .collect(Collectors.toList());
+            return ServiceResponse.successResponse(200, entities.isEmpty() ? ResponseMessages.NO_RECORD : "Fetched successfully", responses);
         } catch (Exception e) {
             e.printStackTrace();
             return ServiceResponse.failureResponse(500, ResponseMessages.INTERNAL_ERROR);
@@ -77,23 +73,19 @@ public class BusinessService implements IBusinessService {
     }
 
     @Override
-    public ServiceResponse<BusinessTypeResponse> updateBusinessType(java.util.UUID id, BusinessTypeUpdateRequest request) {
+    public ServiceResponse<BusinessTypeResponse> updateBusinessType(java.util.UUID adminId, java.util.UUID id, BusinessTypeUpdateRequest request) {
         try {
+            if (adminId == null) return ServiceResponse.failureResponse(401, "Unauthorized");
             Optional<BusinessTypeEntity> existing = businessTypeRepository.findById(id);
-            if (existing.isEmpty()) {
-                return ServiceResponse.failureResponse(404, "Business type not found");
-            }
-            if (request.getBusinessType() == null || request.getBusinessType().isBlank()) {
-                return ServiceResponse.failureResponse(400, "businessType is required");
-            }
-            Optional<BusinessTypeEntity> duplicate = businessTypeRepository.findByBusinessType(request.getBusinessType().trim());
-            if (duplicate.isPresent() && !duplicate.get().getId().equals(id)) {
-                return ServiceResponse.failureResponse(409, "Business type already exists");
-            }
+            if (existing.isEmpty()) return ServiceResponse.failureResponse(404, "Not found");
+            
+            // Check ownership
+            if (existing.get().getAdminId() == null) return ServiceResponse.failureResponse(403, "System types cannot be modified");
+            if (!existing.get().getAdminId().equals(adminId)) return ServiceResponse.failureResponse(403, "Access denied");
+
             BusinessTypeEntity entity = existing.get();
             entity.setBusinessType(request.getBusinessType().trim());
-            BusinessTypeEntity saved = businessTypeRepository.save(entity);
-            return ServiceResponse.successResponse(200, "Business type updated", BusinessTypeMapper.toResponse(saved));
+            return ServiceResponse.successResponse(200, "Updated", BusinessTypeMapper.toResponse(businessTypeRepository.save(entity)));
         } catch (Exception e) {
             e.printStackTrace();
             return ServiceResponse.failureResponse(500, ResponseMessages.INTERNAL_ERROR);
@@ -101,18 +93,21 @@ public class BusinessService implements IBusinessService {
     }
 
     @Override
-    public ServiceResponse<BusinessTypeResponse> deleteBusinessType(java.util.UUID id) {
+    public ServiceResponse<BusinessTypeResponse> deleteBusinessType(java.util.UUID adminId, java.util.UUID id) {
         try {
+            if (adminId == null) return ServiceResponse.failureResponse(401, "Unauthorized");
             Optional<BusinessTypeEntity> existing = businessTypeRepository.findById(id);
-            if (existing.isEmpty()) {
-                return ServiceResponse.failureResponse(404, "Business type not found");
-            }
-            long inUse = businessRepository.countByBusinessTypeEntity_Id(id);
-            if (inUse > 0) {
-                return ServiceResponse.failureResponse(409, "Cannot delete: business type is in use by one or more businesses");
+            if (existing.isEmpty()) return ServiceResponse.failureResponse(404, "Not found");
+
+            // Check ownership
+            if (existing.get().getAdminId() == null) return ServiceResponse.failureResponse(403, "System types cannot be deleted");
+            if (!existing.get().getAdminId().equals(adminId)) return ServiceResponse.failureResponse(403, "Access denied");
+
+            if (businessRepository.countByBusinessTypeEntity_Id(id) > 0) {
+                return ServiceResponse.failureResponse(409, "In use by one or more businesses");
             }
             businessTypeRepository.deleteById(id);
-            return ServiceResponse.successResponse(200, "Business type deleted", null);
+            return ServiceResponse.successResponse(200, "Deleted", null);
         } catch (Exception e) {
             e.printStackTrace();
             return ServiceResponse.failureResponse(500, ResponseMessages.INTERNAL_ERROR);

@@ -15,10 +15,11 @@ public class BusinessTypeMapper {
     }
 
     public static BusinessTypeResponse toResponse(BusinessTypeEntity entity) {
-
+        if (entity == null) return null;
         BusinessTypeResponse dto = new BusinessTypeResponse();
         dto.setId(entity.getId());
         dto.setBusinessType(entity.getBusinessType());
+        dto.setAdminId(entity.getAdminId());
         return dto;
     }
 

@@ -6,11 +6,9 @@ import com.john.ledger.entry.dto.request.RoleSaveRequest;
 import com.john.ledger.entry.dto.request.RoleUpdateRequest;
 import com.john.ledger.entry.dto.response.RoleResponse;
 
-import java.util.UUID;
-
 public interface IRoleService {
-    ServiceResponse<PaginatedResponse<RoleResponse>> getAllRoles(int page, int size);
-    ServiceResponse<RoleResponse> saveRole(RoleSaveRequest request);
-    ServiceResponse<RoleResponse> updateRole(UUID id, RoleUpdateRequest request);
-    ServiceResponse<RoleResponse> deleteRole(UUID id);
+    ServiceResponse<PaginatedResponse<RoleResponse>> getAllRoles(java.util.UUID adminId, int page, int size);
+    ServiceResponse<RoleResponse> saveRole(java.util.UUID adminId, RoleSaveRequest request);
+    ServiceResponse<RoleResponse> updateRole(java.util.UUID adminId, java.util.UUID id, RoleUpdateRequest request);
+    ServiceResponse<RoleResponse> deleteRole(java.util.UUID adminId, java.util.UUID id);
 }

@@ -40,7 +40,7 @@ public class BookCategoryMapper {
         response.setStatus(entity.getStatus());
         response.setCreatedTime(entity.getCreatedTime());
         response.setUpdatedTime(entity.getUpdatedTime());
-
+        response.setAdminId(entity.getAdminId());
         return response;
     }
 }

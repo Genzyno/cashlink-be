@@ -39,6 +39,9 @@ public class RoleEntity {
     @Column(name = "permission_scopes", columnDefinition = "jsonb")
     private Map<String, Map<String, String>> permissionScopes;
 
+    @Column(name = "admin_id")
+    private UUID adminId;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdTime;

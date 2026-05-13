@@ -30,11 +30,15 @@ public class RoleMapper {
     }
 
     public static RoleResponse toResponse(RoleEntity entity) {
+        if (entity == null) {
+            return null;
+        }
         RoleResponse dto = new RoleResponse();
         dto.setId(entity.getId());
         dto.setRoleName(entity.getRoleName());
         dto.setPermissions(entity.getPermissions());
         dto.setPermissionScopes(entity.getPermissionScopes() != null ? entity.getPermissionScopes() : Collections.emptyMap());
+        dto.setAdminId(entity.getAdminId());
         return dto;
     }
 }

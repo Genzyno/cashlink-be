@@ -17,4 +17,5 @@ public class RoleResponse {
     private Map<String, List<String>> permissions;
     /** Per-screen action scope: "all" | "assigned". Omit or empty treated as "all". */
     private Map<String, Map<String, String>> permissionScopes;
+    private UUID adminId;
 }

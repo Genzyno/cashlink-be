@@ -1,5 +1,6 @@
 package com.john.ledger.entry.controller;
 
+import com.john.ledger.common.util.CurrentUserHolder;
 import com.john.ledger.common.util.PaginatedResponse;
 import com.john.ledger.common.util.ServiceResponse;
 import com.john.ledger.entry.dto.request.*;
@@ -28,9 +29,11 @@ public class BookController {
     @Operation(summary = "Save Book Category (body includes businessId)")
     @PostMapping("/save-book-category")
     public ResponseEntity<ServiceResponse<BookCategoryResponse>> saveBookCategory(@RequestBody BookCategorySaveRequest request) {
+        Optional<UUID> adminIdOpt = CurrentUserHolder.getUserId();
+        if (adminIdOpt.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         ServiceResponse<BookCategoryResponse> response = null;
         try {
-            response = bookService.saveBookCategory(request);
+            response = bookService.saveBookCategory(adminIdOpt.get(), request);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
@@ -42,6 +45,8 @@ public class BookController {
     public ResponseEntity<ServiceResponse<BookCategoryResponse>> saveBookCategoryWithPath(
             @PathVariable Optional<UUID> businessId,
             @RequestBody BookCategorySaveRequest request) {
+        Optional<UUID> adminIdOpt = CurrentUserHolder.getUserId();
+        if (adminIdOpt.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         if (businessId.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ServiceResponse.failureResponse(400, "businessId must be a valid UUID. Use the UUID from the get-all-business API."));
@@ -49,7 +54,7 @@ public class BookController {
         request.setBusinessId(businessId.get());
         ServiceResponse<BookCategoryResponse> response = null;
         try {
-            response = bookService.saveBookCategory(request);
+            response = bookService.saveBookCategory(adminIdOpt.get(), request);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
@@ -59,12 +64,14 @@ public class BookController {
     @Operation(summary = "Get All Book Category")
     @GetMapping("/get-all-book-category/{businessId}")
     public ResponseEntity<ServiceResponse<List<BookCategoryResponse>>> getBookCategoryList(@PathVariable Optional<UUID> businessId) {
+        Optional<UUID> adminIdOpt = CurrentUserHolder.getUserId();
+        if (adminIdOpt.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         if (businessId.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ServiceResponse.failureResponse(400, "businessId must be a valid UUID. Use the UUID from the get-all-business API."));
         }
         try {
-            ServiceResponse<List<BookCategoryResponse>> res = bookService.getBookCategoryList(businessId.get());
+            ServiceResponse<List<BookCategoryResponse>> res = bookService.getBookCategoryList(adminIdOpt.get(), businessId.get());
             return ResponseEntity.status(HttpStatus.valueOf(res.getStatusCode())).body(res);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -74,10 +81,11 @@ public class BookController {
     @Operation(summary = "Update Book Category Object")
     @PutMapping("/update-book-category/{id}")
     public ResponseEntity<ServiceResponse<BookCategoryResponse>> updateBookCategory(@PathVariable UUID id, @RequestBody BookCategoryUpdateRequest request) {
-
+        Optional<UUID> adminIdOpt = CurrentUserHolder.getUserId();
+        if (adminIdOpt.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         ServiceResponse<BookCategoryResponse> response = null;
         try {
-            response = bookService.updateBookCategory(id, request);
+            response = bookService.updateBookCategory(adminIdOpt.get(), id, request);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
@@ -87,10 +95,11 @@ public class BookController {
     @Operation(summary = "Delete Book Category Object")
     @DeleteMapping("/delete-book-category/{id}")
     public ResponseEntity<ServiceResponse<BookCategoryResponse>> deleteBookCategory(@PathVariable UUID id) {
-
+        Optional<UUID> adminIdOpt = CurrentUserHolder.getUserId();
+        if (adminIdOpt.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         ServiceResponse<BookCategoryResponse> response = null;
         try {
-            response = bookService.deleteBookCategory(id);
+            response = bookService.deleteBookCategory(adminIdOpt.get(), id);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }

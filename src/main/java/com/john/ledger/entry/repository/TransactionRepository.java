@@ -11,19 +11,18 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 
 @Repository
-public interface TransactionRepository extends JpaRepository<TransactionEntity, UUID>, JpaSpecificationExecutor<TransactionEntity> {
+public interface TransactionRepository extends JpaRepository<TransactionEntity, java.util.UUID>, JpaSpecificationExecutor<TransactionEntity> {
 
-    Page<TransactionEntity> findAllByBookId(UUID bookId, Pageable pageable);
+    Page<TransactionEntity> findAllByBookId(java.util.UUID bookId, Pageable pageable);
 
     /** Chronological order (oldest first) for running balance calculation. */
-    List<TransactionEntity> findAllByBookIdOrderByDateAscTimeAscIdAsc(UUID bookId);
+    List<TransactionEntity> findAllByBookIdOrderByDateAscTimeAscCreatedTimeAscIdAsc(java.util.UUID bookId);
 
     @Query("SELECT t FROM TransactionEntity t WHERE t.bookId = :bookId AND " +
             "LOWER(t.remarks) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
-    Page<TransactionEntity> searchTransactions(@Param("bookId") UUID bookId,
+    Page<TransactionEntity> searchTransactions(@Param("bookId") java.util.UUID bookId,
                                                @Param("searchTerm") String searchTerm,
                                                Pageable pageable);
 
@@ -31,7 +30,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
             "COALESCE(SUM(CASE WHEN transaction_type = 'CASH_IN' THEN amount ELSE 0 END), 0) AS total_cash_in, " +
             "COALESCE(SUM(CASE WHEN transaction_type = 'CASH_OUT' THEN amount ELSE 0 END), 0) AS total_cash_out " +
             "FROM ledger.transactions WHERE book_id = :bookId", nativeQuery = true)
-    List<Object[]> getTransactionSummary(@Param("bookId") UUID bookId);
+    List<Object[]> getTransactionSummary(@Param("bookId") java.util.UUID bookId);
 
     /** Dashboard: summary totals for a business (all books). */
     @Query(value = "SELECT " +
@@ -40,7 +39,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
             "COUNT(*) AS total_transactions, " +
             "COUNT(DISTINCT book_id) AS total_books " +
             "FROM ledger.transactions WHERE business_id = :businessId", nativeQuery = true)
-    List<Object[]> getBusinessSummary(@Param("businessId") UUID businessId);
+    List<Object[]> getBusinessSummary(@Param("businessId") java.util.UUID businessId);
 
     /** Dashboard: summary for a business within date range. */
     @Query(value = "SELECT " +
@@ -50,16 +49,16 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
             "COUNT(DISTINCT book_id) AS total_books " +
             "FROM ledger.transactions WHERE business_id = :businessId " +
             "AND transaction_date >= :fromDate AND transaction_date <= :toDate", nativeQuery = true)
-    List<Object[]> getBusinessSummaryWithDateRange(@Param("businessId") UUID businessId,
+    List<Object[]> getBusinessSummaryWithDateRange(@Param("businessId") java.util.UUID businessId,
                                                    @Param("fromDate") LocalDate fromDate,
                                                    @Param("toDate") LocalDate toDate);
 
     /** Dashboard: recent transactions for a business (any book), newest first. */
-    List<TransactionEntity> findTop10ByBusinessIdOrderByDateDescTimeDescIdDesc(UUID businessId);
+    List<TransactionEntity> findTop10ByBusinessIdOrderByDateDescTimeDescCreatedTimeDescIdDesc(java.util.UUID businessId);
 
     /** Dashboard: recent transactions for a business within date range, newest first. */
-    List<TransactionEntity> findTop10ByBusinessIdAndDateBetweenOrderByDateDescTimeDescIdDesc(
-            UUID businessId, LocalDate fromDate, LocalDate toDate);
+    List<TransactionEntity> findTop10ByBusinessIdAndDateBetweenOrderByDateDescTimeDescCreatedTimeDescIdDesc(
+            java.util.UUID businessId, LocalDate fromDate, LocalDate toDate);
 
     /** Dashboard: monthly trend (net cash flow per month) for date range. Returns month label and net (cashIn - cashOut). */
     @Query(value = "SELECT TO_CHAR(transaction_date, 'Mon') AS x, " +
@@ -69,7 +68,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
             "WHERE business_id = :businessId AND transaction_date >= :fromDate AND transaction_date <= :toDate " +
             "GROUP BY DATE_TRUNC('month', transaction_date), TO_CHAR(transaction_date, 'Mon') " +
             "ORDER BY DATE_TRUNC('month', transaction_date)", nativeQuery = true)
-    List<Object[]> getTrendDataMonthly(@Param("businessId") UUID businessId,
+    List<Object[]> getTrendDataMonthly(@Param("businessId") java.util.UUID businessId,
                                        @Param("fromDate") LocalDate fromDate,
                                        @Param("toDate") LocalDate toDate);
 
@@ -81,7 +80,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
             "WHERE business_id = :businessId AND transaction_date >= :fromDate AND transaction_date <= :toDate " +
             "GROUP BY DATE_TRUNC('week', transaction_date) " +
             "ORDER BY DATE_TRUNC('week', transaction_date)", nativeQuery = true)
-    List<Object[]> getTrendDataWeekly(@Param("businessId") UUID businessId,
+    List<Object[]> getTrendDataWeekly(@Param("businessId") java.util.UUID businessId,
                                       @Param("fromDate") LocalDate fromDate,
                                       @Param("toDate") LocalDate toDate);
 
@@ -93,7 +92,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
             "WHERE business_id = :businessId AND transaction_date >= :fromDate AND transaction_date <= :toDate " +
             "GROUP BY transaction_date " +
             "ORDER BY transaction_date", nativeQuery = true)
-    List<Object[]> getTrendDataDaily(@Param("businessId") UUID businessId,
+    List<Object[]> getTrendDataDaily(@Param("businessId") java.util.UUID businessId,
                                      @Param("fromDate") LocalDate fromDate,
                                      @Param("toDate") LocalDate toDate);
 
@@ -105,10 +104,10 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
             "COALESCE(SUM(CASE WHEN t.transaction_type = 'CASH_OUT' THEN t.amount ELSE 0 END), 0), " +
             "COUNT(*) " +
             "FROM ledger.transactions t " +
-            "WHERE (:businessId IS NULL OR t.business_id = :businessId) " +
-            "AND (:bookId IS NULL OR t.book_id = :bookId) " +
+            "WHERE (cast(:businessId as uuid) IS NULL OR t.business_id = cast(:businessId as uuid)) " +
+            "AND (cast(:bookId as uuid) IS NULL OR t.book_id = cast(:bookId as uuid)) " +
             "AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate", nativeQuery = true)
-    List<Object[]> getAnalyticsOverview(@Param("businessId") UUID businessId, @Param("bookId") UUID bookId,
+    List<Object[]> getAnalyticsOverview(@Param("businessId") java.util.UUID businessId, @Param("bookId") java.util.UUID bookId,
                                         @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     /** Analytics: category-wise. COALESCE category_id to handle nulls. */
@@ -116,11 +115,11 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
             "t.transaction_type, SUM(t.amount) AS total, COUNT(*) AS cnt " +
             "FROM ledger.transactions t " +
             "LEFT JOIN ledger.categories c ON c.id = t.category_id " +
-            "WHERE (:businessId IS NULL OR t.business_id = :businessId) " +
-            "AND (:bookId IS NULL OR t.book_id = :bookId) " +
+            "WHERE (cast(:businessId as uuid) IS NULL OR t.business_id = cast(:businessId as uuid)) " +
+            "AND (cast(:bookId as uuid) IS NULL OR t.book_id = cast(:bookId as uuid)) " +
             "AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate " +
             "GROUP BY t.category_id, c.category_name, t.transaction_type ORDER BY total DESC", nativeQuery = true)
-    List<Object[]> getAnalyticsCategoryWise(@Param("businessId") UUID businessId, @Param("bookId") UUID bookId,
+    List<Object[]> getAnalyticsCategoryWise(@Param("businessId") java.util.UUID businessId, @Param("bookId") java.util.UUID bookId,
                                             @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     /** Analytics: month-wise. */
@@ -128,11 +127,12 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
             "COALESCE(SUM(CASE WHEN transaction_type = 'CASH_IN' THEN amount ELSE 0 END), 0), " +
             "COALESCE(SUM(CASE WHEN transaction_type = 'CASH_OUT' THEN amount ELSE 0 END), 0), COUNT(*) " +
             "FROM ledger.transactions " +
-            "WHERE (:businessId IS NULL OR business_id = :businessId) AND (:bookId IS NULL OR book_id = :bookId) " +
+            "WHERE (cast(:businessId as uuid) IS NULL OR business_id = cast(:businessId as uuid)) " +
+            "AND (cast(:bookId as uuid) IS NULL OR book_id = cast(:bookId as uuid)) " +
             "AND transaction_date >= :fromDate AND transaction_date <= :toDate " +
             "GROUP BY EXTRACT(YEAR FROM transaction_date), EXTRACT(MONTH FROM transaction_date) " +
             "ORDER BY y, m", nativeQuery = true)
-    List<Object[]> getAnalyticsMonthWise(@Param("businessId") UUID businessId, @Param("bookId") UUID bookId,
+    List<Object[]> getAnalyticsMonthWise(@Param("businessId") java.util.UUID businessId, @Param("bookId") java.util.UUID bookId,
                                          @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     /** Analytics: business-wise (all businesses in date range). */
@@ -151,20 +151,23 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
             "COALESCE(SUM(CASE WHEN transaction_type = 'CASH_IN' THEN amount ELSE 0 END), 0), " +
             "COALESCE(SUM(CASE WHEN transaction_type = 'CASH_OUT' THEN amount ELSE 0 END), 0), COUNT(*) " +
             "FROM ledger.transactions " +
-            "WHERE (:businessId IS NULL OR business_id = :businessId) AND (:bookId IS NULL OR book_id = :bookId) " +
+            "WHERE (cast(:businessId as uuid) IS NULL OR business_id = cast(:businessId as uuid)) " +
+            "AND (cast(:bookId as uuid) IS NULL OR book_id = cast(:bookId as uuid)) " +
             "AND transaction_date >= :fromDate AND transaction_date <= :toDate " +
             "GROUP BY transaction_date ORDER BY transaction_date", nativeQuery = true)
-    List<Object[]> getAnalyticsByDay(@Param("businessId") UUID businessId, @Param("bookId") UUID bookId,
-                                    @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+    List<Object[]> getAnalyticsByDay(@Param("businessId") java.util.UUID businessId, @Param("bookId") java.util.UUID bookId,
+                                     @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     /** Analytics: time-series by year. */
     @Query(value = "SELECT EXTRACT(YEAR FROM transaction_date)::int, " +
             "COALESCE(SUM(CASE WHEN transaction_type = 'CASH_IN' THEN amount ELSE 0 END), 0), " +
             "COALESCE(SUM(CASE WHEN transaction_type = 'CASH_OUT' THEN amount ELSE 0 END), 0), COUNT(*) " +
             "FROM ledger.transactions " +
-            "WHERE (:businessId IS NULL OR business_id = :businessId) AND (:bookId IS NULL OR book_id = :bookId) " +
+            "WHERE (cast(:businessId as uuid) IS NULL OR business_id = cast(:businessId as uuid)) " +
+            "AND (cast(:bookId as uuid) IS NULL OR book_id = cast(:bookId as uuid)) " +
             "AND transaction_date >= :fromDate AND transaction_date <= :toDate " +
             "GROUP BY EXTRACT(YEAR FROM transaction_date) ORDER BY 1", nativeQuery = true)
-    List<Object[]> getAnalyticsByYear(@Param("businessId") UUID businessId, @Param("bookId") UUID bookId,
-                                     @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+    List<Object[]> getAnalyticsByYear(@Param("businessId") java.util.UUID businessId, @Param("bookId") java.util.UUID bookId,
+                                      @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 }
+

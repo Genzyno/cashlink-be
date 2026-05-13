@@ -16,7 +16,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class AnalyticsService implements IAnalyticsService {
@@ -31,7 +30,7 @@ public class AnalyticsService implements IAnalyticsService {
     private PermissionScopeHelper permissionScopeHelper;
 
     @Override
-    public ServiceResponse<CategoryWiseResponse> getCategoryWise(UUID businessId, UUID bookId, LocalDate fromDate, LocalDate toDate) {
+    public ServiceResponse<CategoryWiseResponse> getCategoryWise(java.util.UUID businessId, java.util.UUID bookId, LocalDate fromDate, LocalDate toDate) {
         try {
             validateDateRange(fromDate, toDate);
             applyAssignedScopeBusiness(businessId);
@@ -76,7 +75,7 @@ public class AnalyticsService implements IAnalyticsService {
     }
 
     @Override
-    public ServiceResponse<MonthWiseResponse> getMonthWise(UUID businessId, UUID bookId, LocalDate fromDate, LocalDate toDate) {
+    public ServiceResponse<MonthWiseResponse> getMonthWise(java.util.UUID businessId, java.util.UUID bookId, LocalDate fromDate, LocalDate toDate) {
         try {
             validateDateRange(fromDate, toDate);
             applyAssignedScopeBusiness(businessId);
@@ -123,13 +122,13 @@ public class AnalyticsService implements IAnalyticsService {
             AnalyticsOverviewDTO overview = buildOverview(overviewRows, fromDate, toDate, null);
 
             List<Object[]> rows = transactionRepository.getAnalyticsBusinessWise(fromDate, toDate);
-            Optional<UUID> userId = permissionScopeHelper.getCurrentUserId();
+            Optional<java.util.UUID> userId = permissionScopeHelper.getCurrentUserId();
             List<BusinessWiseItemDTO> byBusiness = new ArrayList<>();
-            List<UUID> allowedBusinessIds = userId.isPresent()
+            List<java.util.UUID> allowedBusinessIds = userId.isPresent()
                     ? bookRepository.findBusinessIdsByAssignedUserId(userId.get())
                     : null;
             for (Object[] r : rows) {
-                UUID bid = r[0] != null ? UUID.fromString(r[0].toString()) : null;
+                java.util.UUID bid = r[0] != null ? java.util.UUID.fromString(r[0].toString()) : null;
                 if (bid != null && allowedBusinessIds != null && !allowedBusinessIds.isEmpty() && !allowedBusinessIds.contains(bid)) {
                     continue;
                 }
@@ -159,7 +158,7 @@ public class AnalyticsService implements IAnalyticsService {
     }
 
     @Override
-    public ServiceResponse<TimeSeriesResponse> getTimeSeries(UUID businessId, UUID bookId, LocalDate fromDate, LocalDate toDate, String granularity) {
+    public ServiceResponse<TimeSeriesResponse> getTimeSeries(java.util.UUID businessId, java.util.UUID bookId, LocalDate fromDate, LocalDate toDate, String granularity) {
         try {
             validateDateRange(fromDate, toDate);
             applyAssignedScopeBusiness(businessId);
@@ -254,17 +253,17 @@ public class AnalyticsService implements IAnalyticsService {
         }
     }
 
-    private void applyAssignedScopeBusiness(UUID businessId) {
+    private void applyAssignedScopeBusiness(java.util.UUID businessId) {
         if (businessId == null) return;
         if (permissionScopeHelper.isAssignedScope("dashboard", "view") && permissionScopeHelper.getCurrentUserId().isPresent()) {
-            List<UUID> allowed = bookRepository.findBusinessIdsByAssignedUserId(permissionScopeHelper.getCurrentUserId().get());
+            List<java.util.UUID> allowed = bookRepository.findBusinessIdsByAssignedUserId(permissionScopeHelper.getCurrentUserId().get());
             if (!allowed.contains(businessId)) {
                 throw new IllegalArgumentException("Access denied: you can only view analytics for assigned businesses.");
             }
         }
     }
 
-    private void applyAssignedScopeBook(UUID bookId) {
+    private void applyAssignedScopeBook(java.util.UUID bookId) {
         if (bookId == null) return;
         if (permissionScopeHelper.isAssignedScope("dashboard", "view") && permissionScopeHelper.getCurrentUserId().isPresent()) {
             boolean allowed = bookRepository.existsByIdAndAssignedUserId(bookId, permissionScopeHelper.getCurrentUserId().get());

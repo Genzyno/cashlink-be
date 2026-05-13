@@ -89,7 +89,7 @@ public class DashboardService implements IDashboardService {
                     .categoryCount(categoryCount)
                     .build();
 
-            List<TransactionEntity> recentList = transactionRepository.findTop10ByBusinessIdAndDateBetweenOrderByDateDescTimeDescIdDesc(
+            List<TransactionEntity> recentList = transactionRepository.findTop10ByBusinessIdAndDateBetweenOrderByDateDescTimeDescCreatedTimeDescIdDesc(
                     businessId, fromDate, toDate);
             List<RecentTransactionItemDTO> recentTransactions = new ArrayList<>();
             for (TransactionEntity t : recentList) {

@@ -7,12 +7,15 @@ import java.time.LocalDate;
 
 public interface IAnalyticsService {
 
-    ServiceResponse<CategoryWiseResponse> getCategoryWise(java.util.UUID businessId, java.util.UUID bookId, LocalDate fromDate, LocalDate toDate);
+    // changes
+    ServiceResponse<CategoryWiseResponse> getCategoryWise(java.util.UUID businessId, java.util.UUID bookId,
+            LocalDate fromDate, LocalDate toDate);
 
-    ServiceResponse<MonthWiseResponse> getMonthWise(java.util.UUID businessId, java.util.UUID bookId, LocalDate fromDate, LocalDate toDate);
+    ServiceResponse<MonthWiseResponse> getMonthWise(java.util.UUID businessId, java.util.UUID bookId,
+            LocalDate fromDate, LocalDate toDate);
 
     ServiceResponse<BusinessWiseResponse> getBusinessWise(LocalDate fromDate, LocalDate toDate);
 
-    ServiceResponse<TimeSeriesResponse> getTimeSeries(java.util.UUID businessId, java.util.UUID bookId, LocalDate fromDate, LocalDate toDate, String granularity);
+    ServiceResponse<TimeSeriesResponse> getTimeSeries(java.util.UUID businessId, java.util.UUID bookId,
+            LocalDate fromDate, LocalDate toDate, String granularity);
 }
-

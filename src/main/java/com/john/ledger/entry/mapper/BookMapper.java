@@ -40,6 +40,8 @@ public class BookMapper {
             );
         }
 
+        dto.setIsActive(entity.getIsActive());
+
         return dto;
     }
 }

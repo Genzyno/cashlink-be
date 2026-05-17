@@ -2,6 +2,7 @@ package com.john.ledger.entry.controller;
 
 import com.john.ledger.common.enums.TransactionType;
 import com.john.ledger.common.util.ServiceResponse;
+import com.john.ledger.common.util.PaginatedResponse;
 import com.john.ledger.entry.dto.request.TransactionBulkDeleteRequest;
 import com.john.ledger.entry.dto.request.TransactionExportRequest;
 import com.john.ledger.entry.dto.request.TransactionSaveRequest;
@@ -45,6 +46,25 @@ public class TransactionController {
 
     @Autowired
     private TransactionFileRepository transactionFileRepository;
+
+    // ===================== User History =====================
+
+    @Operation(summary = "Get transaction history for a user across all books in a business")
+    @GetMapping("/user-history/{userId}")
+    public ResponseEntity<ServiceResponse<PaginatedResponse<TransactionResponse>>> getUserHistory(
+            @PathVariable UUID userId,
+            @RequestParam UUID businessId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        ServiceResponse<PaginatedResponse<TransactionResponse>> response = null;
+        try {
+            response = transactionService.getUserHistory(userId, businessId, page, size);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+        return ResponseEntity.status(HttpStatus.valueOf(response.getStatusCode())).body(response);
+    }
 
     // ===================== Save Transaction =====================
 

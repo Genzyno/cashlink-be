@@ -1,4 +1,4 @@
-﻿# My Ledger â€“ All API Endpoints (End-to-End)
+# My Ledger â€“ All API Endpoints (End-to-End)
 
 **Full base URL:** `http://localhost:8080/cashlink-api` or `https://<your-host>/cashlink-api`
 
@@ -134,6 +134,8 @@ Optional for some APIs: `X-Logged-User-Id: <user-uuid>` (must match token).
 | POST | `/cashlink-api/role/save-role` | **Yes** | Create role |
 | PUT | `/cashlink-api/role/update-role/{id}` | **Yes** | Update role |
 | DELETE | `/cashlink-api/role/delete-role/{id}` | **Yes** | Delete role |
+| POST | `/cashlink-api/support/raise-ticket` | No | Raise a support ticket |
+| GET | `/cashlink-api/support/my-tickets` | **Yes** | Get user's support tickets (query: userId) |
 
 ---
 
@@ -141,9 +143,9 @@ Optional for some APIs: `X-Logged-User-Id: <user-uuid>` (must match token).
 
 | Auth | Endpoints |
 |------|-----------|
-| **No auth** | send-otp, verify-otp, refresh, forgot-password, google, google/id-token, google/callback, send-verification-email, verify-email (GET/POST), invite-by-token, accept-invite, reject-invite |
+| **No auth** | send-otp, verify-otp, refresh, forgot-password, google, google/id-token, google/callback, send-verification-email, verify-email (GET/POST), invite-by-token, accept-invite, reject-invite, support/raise-ticket |
 | **Optional** | logout (can send Bearer for consistency) |
-| **Bearer required** | All other endpoints (me, users/* except invite endpoints, business/*, book/*, transaction/*, dashboard/*, role/*) |
+| **Bearer required** | All other endpoints (me, users/* except invite endpoints, business/*, book/*, transaction/*, dashboard/*, role/*, support/* except raise-ticket) |
 
 **Example request with auth:**
 ```http

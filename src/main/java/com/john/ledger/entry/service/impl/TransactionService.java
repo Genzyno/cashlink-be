@@ -11,6 +11,7 @@ import com.john.ledger.entry.dto.response.TransactionDashboardResponse;
 import com.john.ledger.entry.dto.response.TransactionListResponse;
 import com.john.ledger.entry.dto.response.TransactionResponse;
 import com.john.ledger.entry.dto.response.TransactionSummaryResponse;
+import com.john.ledger.entry.entity.BookEntity;
 import com.john.ledger.entry.entity.BookCategoryEntity;
 import com.john.ledger.entry.entity.PaymentModeEntity;
 import com.john.ledger.entry.entity.TransactionEntity;
@@ -656,6 +657,61 @@ public class TransactionService implements ITransactionService {
         }
     }
 
+    @Override
+    public ServiceResponse<PaginatedResponse<TransactionResponse>> getUserHistory(java.util.UUID userId, java.util.UUID businessId, int page, int size) {
+        try {
+            if (userId == null) {
+                return ServiceResponse.failureResponse(400, "userId is required.");
+            }
+            if (businessId == null) {
+                return ServiceResponse.failureResponse(400, "businessId is required.");
+            }
+
+            // Sort: newest first by date and time
+            Sort sort = Sort.by(Sort.Order.desc("date"), Sort.Order.desc("time"), Sort.Order.desc("id"));
+            PageRequest pageRequest = PageRequest.of(page, size, sort);
+
+            Page<TransactionEntity> transactionPage = transactionRepository.findAllByBusinessIdAndCreatedByUserId(businessId, userId, pageRequest);
+
+            if (transactionPage.isEmpty()) {
+                return ServiceResponse.successResponse(200, ResponseMessages.NO_RECORD, PaginatedResponse.empty());
+            }
+
+            // Batch-fetch category, payment mode, user, and book names
+            Map<java.util.UUID, String> categoryNames = batchFetchCategoryNames(transactionPage.getContent());
+            Map<java.util.UUID, String> paymentModeNames = batchFetchPaymentModeNames(transactionPage.getContent());
+            Map<java.util.UUID, String> userNames = batchFetchUserNames(transactionPage.getContent());
+            Map<java.util.UUID, String> bookNames = batchFetchBookNames(transactionPage.getContent());
+
+            Page<TransactionResponse> dtoPage = transactionPage.map(entity -> {
+                TransactionResponse response = TransactionMapper.toResponse(entity);
+                if (entity.getCategoryId() != null) {
+                    response.setCategoryName(categoryNames.get(entity.getCategoryId()));
+                }
+                if (entity.getPaymentModeId() != null) {
+                    response.setPaymentModeName(paymentModeNames.get(entity.getPaymentModeId()));
+                }
+                if (entity.getCreatedByUserId() != null) {
+                    response.setCreatedByName(userNames.get(entity.getCreatedByUserId()));
+                }
+                if (entity.getUpdatedByUserId() != null) {
+                    response.setUpdatedByName(userNames.get(entity.getUpdatedByUserId()));
+                }
+                if (entity.getBookId() != null) {
+                    response.setBookName(bookNames.get(entity.getBookId()));
+                }
+                return response;
+            });
+
+            PaginatedResponse<TransactionResponse> paginatedResponse = PaginationUtil.createPaginatedResponse(dtoPage);
+            return ServiceResponse.successResponse(200, "User history fetched successfully", paginatedResponse);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ServiceResponse.failureResponse(500, ResponseMessages.INTERNAL_ERROR);
+        }
+    }
+
     /** When scope is "assigned", verifies the book is assigned to the current user. Returns failure response or null if allowed. */
     private ServiceResponse<?> checkBookAccessForAssignedScope(java.util.UUID bookId) {
         if (!permissionScopeHelper.isAssignedScope("transactions", "view")) return null;
@@ -715,6 +771,10 @@ public class TransactionService implements ITransactionService {
                     .ifPresent(u -> response.setUpdatedByName(u.getUserName()));
         }
 
+        if (entity.getBookId() != null) {
+            bookRepository.findById(entity.getBookId())
+                    .ifPresent(book -> response.setBookName(book.getBookName()));
+        }
         return response;
     }
 
@@ -760,6 +820,21 @@ public class TransactionService implements ITransactionService {
         if (userIds.isEmpty()) return Collections.emptyMap();
         return userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(UserEntity::getId, UserEntity::getUserName));
+    }
+
+    /**
+     * Batch-fetch book names for a list of transactions (avoids N+1 queries).
+     */
+    private Map<java.util.UUID, String> batchFetchBookNames(List<TransactionEntity> transactions) {
+        Set<java.util.UUID> bookIds = transactions.stream()
+                .map(TransactionEntity::getBookId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (bookIds.isEmpty()) return Collections.emptyMap();
+
+        return bookRepository.findAllById(bookIds).stream()
+                .collect(Collectors.toMap(BookEntity::getId, BookEntity::getBookName));
     }
 
     // ===================== File Storage Helpers =====================

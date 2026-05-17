@@ -30,6 +30,7 @@ public class TransactionResponse {
     private String categoryName;
     private java.util.UUID paymentModeId;
     private String paymentModeName;
+    private String bookName;
     private List<TransactionFileResponse> billFiles;
     /** Running/cumulative balance after this transaction (for dashboard table). */
     private BigDecimal runningBalance;

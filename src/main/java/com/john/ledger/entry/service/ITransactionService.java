@@ -1,6 +1,7 @@
 package com.john.ledger.entry.service;
 
 import com.john.ledger.common.util.ServiceResponse;
+import com.john.ledger.common.util.PaginatedResponse;
 
 import com.john.ledger.common.enums.TransactionType;
 
@@ -44,4 +45,6 @@ public interface ITransactionService {
 
     /** Export filtered transactions to Excel. Returns file bytes and filename on success, or statusCode + message on failure. */
     ExportExcelResult exportToExcel(TransactionExportRequest request);
+
+    ServiceResponse<PaginatedResponse<TransactionResponse>> getUserHistory(UUID userId, UUID businessId, int page, int size);
 }

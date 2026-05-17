@@ -13,4 +13,5 @@ public class BookResponse {
     private String bookName;
     private List<java.util.UUID> assignedUserIds;
     private java.util.UUID businessId;
+    private Boolean isActive;
 }

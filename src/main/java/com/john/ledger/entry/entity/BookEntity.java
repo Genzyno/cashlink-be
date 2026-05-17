@@ -43,4 +43,12 @@ public class BookEntity {
     @UpdateTimestamp
     @Column
     private LocalDateTime updatedTime;
+
+    @Column(name = "is_active")
+    @Builder.Default
+    private Boolean isActive = true;
+
+    public Boolean getIsActive() {
+        return isActive == null || isActive;
+    }
 }

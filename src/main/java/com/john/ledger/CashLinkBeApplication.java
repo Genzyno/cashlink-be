@@ -1,4 +1,4 @@
-﻿package com.john.ledger;
+package com.john.ledger;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

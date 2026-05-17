@@ -16,6 +16,8 @@ import java.util.List;
 public interface TransactionRepository extends JpaRepository<TransactionEntity, java.util.UUID>, JpaSpecificationExecutor<TransactionEntity> {
 
     Page<TransactionEntity> findAllByBookId(java.util.UUID bookId, Pageable pageable);
+    
+    Page<TransactionEntity> findAllByBusinessIdAndCreatedByUserId(java.util.UUID businessId, java.util.UUID createdByUserId, Pageable pageable);
 
     /** Chronological order (newest first) for fetching, reversed locally for balance calc. */
     List<TransactionEntity> findAllByBookIdOrderByDateDescTimeDescCreatedTimeDescIdDesc(java.util.UUID bookId);

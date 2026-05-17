@@ -1,4 +1,4 @@
-﻿package com.john.ledger.auth.filter;
+package com.john.ledger.auth.filter;
 
 import com.john.ledger.auth.service.JwtService;
 import com.john.ledger.common.util.CurrentUserHolder;
@@ -124,7 +124,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 || path.contains("/favicon.ico")
                 || path.contains("/invite-by-token")
                 || path.contains("/accept-invite")
-                || path.contains("/reject-invite");
+                || path.contains("/reject-invite")
+                || path.contains("/support/raise-ticket");
     }
 
     private void send401(HttpServletResponse response, String msg) throws IOException {
